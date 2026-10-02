@@ -1,0 +1,898 @@
+/* Polynomial Entry -- visual paper. Palette: a cool, lattice-grey ground
+   (the paper's own "high contrast" coefficients live on a fixed grid) with
+   a warm copper accent picked precisely for the contrast against it -- the
+   temperature difference *is* the accent, not a literal illustration of
+   the paper's subject. Source Serif 4 carries reading text (statements,
+   proofs -- it sits well beside KaTeX's Computer Modern); IBM Plex Sans
+   carries UI chrome; IBM Plex Mono carries paper labels and numbers. */
+
+:root {
+  color-scheme: light;
+  --bg: #eef2f5;
+  --surface: #ffffff;
+  --surface-2: #e3e9ee;
+  --surface-3: #d6dee5;
+  --border: #c6d0d8;
+  --text: #141c24;
+  --text-dim: #4d5c68;
+  --text-faint: #8496a3;
+  --accent: #a6501c;
+  --accent-strong: #7f3a13;
+  --accent-tint: #f4e3d6;
+  --accent-2: #2c6e68;
+  --accent-2-tint: #dcece9;
+  --ok: #1f8a3b;
+  --draft: #8a5b12;
+  --draft-tint: #f2e6cc;
+  /* fig.retained-histories' third data-series role ("fluc"): the shared
+     accent/accent-2/draft trio is already spoken for (case-role figures,
+     draft status badges), and that figure's own colour-roles section
+     names a violet distinct from all of them. */
+  --series-violet: #6a4c93;
+  /* external-source external source (tasks/p7a-tooling.md sec.6): quoted external-source
+     items, and background nodes (new mathematics, labelled as such). */
+  --xsrc: #1d6fae;
+  --xsrc-tint: #dfeaf4;
+  --background-node: #6a4c93;
+  --background-node-tint: #ebe4f3;
+  /* case-contraction's own role explicitly asks for blue (distinct from
+     case-update's teal and case-obstruction's warm copper) -- audit
+     feedback: orange contraction markers were indistinguishable from
+     obstruction's. */
+  --series-blue: #1d6fae;
+  /* Figure roles (content/figures/*.yaml design briefs): family 1, family 2,
+     the common minorant Theta, neutral grey, the figure ground and ink, and the
+     summable / divergent states. Mirrored in scripts/lib/figureSnapshot.mjs
+     (THEME_COLORS), which the TikZ build and the audit snapshots read. */
+  --fig-1: #0072b2;
+  --fig-2: #d55e00;
+  --fig-theta: #6a3d9a;
+  --fig-grey: #7f7f7f;
+  --fig-bg: #ffffff;
+  --fig-fg: #141c24;
+  --fig-ok: #1f8a3b;
+  --fig-bad: #c0392b;
+  --link: var(--accent);
+  --focus-ring: #1d6fae;
+  --shadow: 0 8px 24px -12px rgba(20, 28, 36, 0.35);
+  --radius: 8px;
+  --font-ui: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-read: "Source Serif 4", Georgia, "Times New Roman", serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+  padding-top: env(safe-area-inset-top, 0px);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --bg: #10161a;
+    --surface: #171f24;
+    --surface-2: #1e282e;
+    --surface-3: #283238;
+    --border: #313e46;
+    --text: #e8eef2;
+    --text-dim: #aebac3;
+    --text-faint: #74838d;
+    --accent: #e69158;
+    --accent-strong: #f2ac7c;
+    --accent-tint: #3a2a1e;
+    --accent-2: #6cbdb5;
+    --accent-2-tint: #1c3230;
+  --ok: #4cc76a;
+    --draft: #e0b158;
+    --draft-tint: #3a2f18;
+    --series-violet: #b39ddb;
+    /* external-source external source (tasks/p7a-tooling.md sec.6): quoted external-source
+       items, and background nodes (new mathematics, labelled as such). */
+    --xsrc: #6cb6ea;
+    --xsrc-tint: #172a38;
+    --background-node: #b39ddb;
+    --background-node-tint: #2a2238;
+    --series-blue: #6cb6ea;
+    --fig-1: #56b4e9;
+    --fig-2: #f0883e;
+    --fig-theta: #b99be0;
+    --fig-grey: #8b98a1;
+    --fig-bg: #171f24;
+    --fig-fg: #e8eef2;
+    --fig-ok: #4cc76a;
+    --fig-bad: #f2726f;
+    --link: var(--accent);
+    --focus-ring: #6cb6ea;
+    --shadow: 0 12px 28px -14px rgba(0, 0, 0, 0.6);
+  }
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #10161a;
+  --surface: #171f24;
+  --surface-2: #1e282e;
+  --surface-3: #283238;
+  --border: #313e46;
+  --text: #e8eef2;
+  --text-dim: #aebac3;
+  --text-faint: #74838d;
+  --accent: #e69158;
+  --accent-strong: #f2ac7c;
+  --accent-tint: #3a2a1e;
+  --accent-2: #6cbdb5;
+  --accent-2-tint: #1c3230;
+  --ok: #4cc76a;
+  --draft: #e0b158;
+  --draft-tint: #3a2f18;
+  --series-violet: #b39ddb;
+  /* external-source external source (tasks/p7a-tooling.md sec.6): quoted external-source
+     items, and background nodes (new mathematics, labelled as such). */
+  --xsrc: #6cb6ea;
+  --xsrc-tint: #172a38;
+  --background-node: #b39ddb;
+  --background-node-tint: #2a2238;
+  --series-blue: #6cb6ea;
+  --fig-1: #56b4e9;
+  --fig-2: #f0883e;
+  --fig-theta: #b99be0;
+  --fig-grey: #8b98a1;
+  --fig-bg: #171f24;
+  --fig-fg: #e8eef2;
+  --fig-ok: #4cc76a;
+  --fig-bad: #f2726f;
+  --link: var(--accent);
+  --focus-ring: #6cb6ea;
+  --shadow: 0 12px 28px -14px rgba(0, 0, 0, 0.6);
+}
+
+* { box-sizing: border-box; }
+html, body { height: 100%; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-ui);
+  font-size: 15px;
+  line-height: 1.5;
+  display: flex;
+  flex-direction: column;
+}
+img { max-width: 100%; }
+[hidden] { display: none !important; }
+:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
+code, .mono { font-family: var(--font-mono); font-size: 0.92em; }
+
+.sr-only {
+  position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0;
+}
+.skip-link {
+  position: absolute; left: 8px; top: -40px; z-index: 200;
+  background: var(--accent); color: #fff; padding: 8px 12px; border-radius: 6px;
+  transition: top .15s ease;
+}
+.skip-link:focus { top: 8px; }
+
+/* ---------- top bar ---------- */
+.topbar {
+  display: flex; align-items: center; gap: 16px;
+  padding: 10px 16px calc(10px + env(safe-area-inset-top, 0px));
+  padding-top: 10px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  position: sticky; top: env(safe-area-inset-top, 0px); z-index: 20;
+}
+.topbar__brand { display: flex; align-items: center; gap: 10px; min-width: 0; }
+button.topbar__brand {
+  border: 0; background: none; padding: 0; margin: 0; text-align: left; color: inherit;
+  font: inherit; cursor: pointer;
+}
+.topbar__mark { font-size: 22px; color: var(--accent); }
+.topbar__titles { display: flex; flex-direction: column; min-width: 0; }
+.topbar__kicker {
+  font-size: 11px; text-transform: uppercase; letter-spacing: .08em;
+  color: var(--text-faint);
+}
+.topbar__title {
+  font-family: var(--font-read); font-weight: 600; font-size: 17px; margin: 0;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.topbar__search { flex: 1 1 auto; max-width: 480px; position: relative; }
+.topbar__search input {
+  width: 100%; padding: 8px 12px; border-radius: 999px; border: 1px solid var(--border);
+  background: var(--surface-2); color: var(--text); font: inherit;
+}
+.topbar__actions { display: flex; align-items: center; gap: 10px; margin-left: auto; }
+.icon-button {
+  border: 1px solid var(--border); background: var(--surface-2); color: var(--text);
+  border-radius: 999px; width: 34px; height: 34px; cursor: pointer; font-size: 16px;
+}
+.icon-button:hover { background: var(--surface-3); }
+
+.search-results {
+  position: absolute; top: calc(100% + 6px); left: 0; right: 0;
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+  box-shadow: var(--shadow); max-height: 60vh; overflow: auto; z-index: 30;
+}
+.search-results__item {
+  display: block; width: 100%; text-align: left; padding: 8px 12px; border: 0;
+  background: none; color: var(--text); cursor: pointer; font: inherit;
+  border-bottom: 1px solid var(--border);
+}
+.search-results__item:last-child { border-bottom: none; }
+.search-results__item:hover, .search-results__item.is-active { background: var(--surface-2); }
+.search-results__num { font-family: var(--font-mono); color: var(--text-faint); margin-right: 8px; }
+
+/* ---------- badges ---------- */
+.badge {
+  display: inline-block; font-size: 11px; font-weight: 600; letter-spacing: .02em;
+  padding: 2px 8px; border-radius: 999px; text-transform: uppercase;
+}
+.badge--dev { background: var(--accent); color: #fff; }
+.badge--draft { background: var(--draft-tint); color: var(--draft); }
+.badge--ok { background: color-mix(in srgb, var(--ok) 14%, transparent); color: var(--ok); font-family: var(--font-mono); text-transform: none; }
+.badge--kind { background: var(--surface-2); color: var(--text-dim); }
+.badge--audit-none { background: var(--surface-2); color: var(--text-faint); }
+
+/* ---------- tabs (mobile pane switch) ---------- */
+.tabbar { display: none; background: var(--surface); border-bottom: 1px solid var(--border); }
+.tabbar__btn {
+  flex: 1; padding: 10px; border: 0; background: none; color: var(--text-dim);
+  font: inherit; font-weight: 600; border-bottom: 2px solid transparent; cursor: pointer;
+}
+.tabbar__btn.is-active { color: var(--accent); border-bottom-color: var(--accent); }
+
+/* ---------- layout ---------- */
+/* --panel-pct: the reading panel's share of the width (site/readingmode.mjs
+   sets it inline once the reader drags the divider). */
+.layout { flex: 1 1 auto; display: flex; min-height: 0; --panel-pct: 40; }
+.pane { min-width: 0; }
+.pane--graph { flex: 1 1 0; position: relative; background: var(--surface-2); }
+/* The reading panel's one text-size knob (tasks/p13-reading-mode.md):
+   --reading-scale sets its base font size, and everything inside it is sized
+   in em (and its column in ch) from here. */
+.pane--panel {
+  flex: 0 0 calc(var(--panel-pct) * 1%); overflow-y: auto; background: var(--surface);
+  font-size: calc(15px * var(--reading-scale, 1));
+}
+
+.cy-canvas { position: absolute; inset: 0; }
+.outline { position: absolute; inset: 0; overflow: auto; padding: 12px 16px; background: var(--surface-2); }
+.outline ul { list-style: none; margin: 0; padding-left: 18px; }
+.outline > ul { padding-left: 0; }
+.outline li { margin: 2px 0; }
+.outline button {
+  background: none; border: 0; color: var(--text); font: inherit; cursor: pointer;
+  padding: 4px 6px; border-radius: 6px; text-align: left; width: 100%;
+}
+.outline button:hover { background: var(--surface-3); }
+.outline button[aria-current] { background: var(--surface); box-shadow: inset 0 0 0 1.5px var(--accent); }
+.outline .outline__ext button { color: var(--text-dim); font-style: italic; }
+.outline__num { font-family: var(--font-mono); color: var(--text-faint); margin-right: 6px; }
+
+/* Bottom-right (tasks/p18-legend.md), not bottom-left: that is where the
+   essentials whole map's band labels sit (in the margin outside the bands),
+   and reserving room for the legend there this route much of the fitted
+   zoom (insets() reserves room for the legend by its own current side). */
+.graph-legend {
+  position: absolute; right: 12px; bottom: 12px; display: flex; flex-direction: column; gap: 4px;
+  align-items: flex-start; width: fit-content; max-width: min(300px, calc(100% - 24px));
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 6px 10px; font-size: 12px; color: var(--text-dim);
+}
+/* The "Legend" toggle (tasks/p18-legend.md): collapsed, only the head shows, so
+   the legend never covers much of the graph. Remembered via data-graph-legend
+   -- pane.dataset.legendCollapsed (localStorage behind try/catch). */
+.graph-legend__head {
+  font: inherit; font-size: 12px; font-weight: 600; color: var(--text); background: none; border: 0;
+  padding: 0; cursor: pointer; display: inline-flex; align-items: center; gap: 5px;
+}
+.graph-legend__chevron {
+  display: inline-block; width: 0; height: 0; border-left: 4px solid transparent; border-right: 4px solid transparent;
+  border-top: 5px solid var(--text-dim); transition: transform 150ms;
+}
+.pane--graph[data-legend-collapsed="true"] .graph-legend__chevron { transform: rotate(-90deg); }
+.pane--graph[data-legend-collapsed="true"] .graph-legend__body { display: none; }
+.graph-legend__body { display: flex; flex-direction: column; gap: 4px; margin-top: 4px; }
+.graph-legend__row { display: flex; gap: 4px 12px; flex-wrap: wrap; align-items: center; }
+.graph-legend span { display: inline-flex; align-items: center; gap: 5px; }
+/* A swatch label with an inner element (the external source's name,
+   [data-ext-name]) must not be a flex container -- every child element would
+   become its own flex item and the phrase would break into columns. Plain
+   inline text with a hanging indent past the swatch wraps between words. */
+.graph-legend__row > span[aria-hidden] { display: inline-block; padding-left: 17px; text-indent: -17px; }
+.graph-legend__row > span[aria-hidden] > i { text-indent: 0; margin-right: 5px; vertical-align: -1px; }
+.graph-legend span span { display: inline; }
+
+.graph-legend__key { color: var(--text); }
+.graph-legend__toggle {
+  display: inline-block; cursor: pointer; color: var(--text);
+}
+.graph-legend__toggle input { margin: 0 6px 0 0; vertical-align: -2px; accent-color: var(--xsrc); }
+.legend-swatch { width: 10px; height: 10px; border-radius: 3px; display: inline-block; }
+/* Swatches mirror the real cytoscape styles in site/graphnav.mjs's buildStylesheet
+   -- fill, border colour and border style match exactly (tasks/p18-legend.md). */
+.legend-swatch--theorem { background: var(--accent); border: 1px solid var(--accent-strong); }
+.legend-swatch--section { background: var(--surface-2); border: 1px solid var(--text-faint); }
+.legend-swatch--subsection { background: var(--surface); border: 1.5px dashed var(--text-dim); width: 12px; height: 12px; }
+.legend-swatch--result { background: var(--accent-2-tint); border: 1px solid var(--accent-2); }
+.legend-swatch--ext { background: var(--surface); border: 2px dotted var(--text-faint); }
+
+/* Graph controls (tasks/p8-graph-navigation.md): view switch and hint at the
+   top left, zoom at the top right. */
+.cy-canvas:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: -2px; }
+.graph-toolbar {
+  position: absolute; left: 12px; top: 12px; right: 60px; display: flex; flex-wrap: wrap;
+  align-items: center; gap: 8px; pointer-events: none;
+}
+.graph-toolbar > * { pointer-events: auto; }
+.graph-hint {
+  flex: 1 1 220px; margin: 0; font-size: 12px; color: var(--text-dim); pointer-events: none;
+  text-shadow: 0 0 3px var(--surface-2), 0 0 6px var(--surface-2);
+}
+.graph-btn {
+  font: inherit; font-size: 13px; font-weight: 500; line-height: 1.2; padding: 6px 12px;
+  border-radius: 999px; border: 1px solid var(--border); background: var(--surface); color: var(--text);
+  cursor: pointer; box-shadow: 0 1px 2px rgba(20, 28, 36, 0.08);
+}
+.graph-btn:hover { background: var(--surface-3); }
+.graph-btn:disabled { opacity: 0.45; cursor: default; }
+.graph-btn:disabled:hover { background: var(--surface); }
+.graph-btn[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--surface); }
+/* Back/Forward (tasks/p16 "Back" button): plain history.back()/forward(),
+   so they always agree with the browser's own controls; hidden by default
+   in the reading panel (used only at phone width, below). */
+.reading-panel__back { display: none; }
+.pane--graph[data-graph-mode="focus"] .graph-btn--map { border-color: var(--accent); color: var(--accent-strong); font-weight: 600; }
+.graph-hops { display: inline-flex; }
+.graph-hops .graph-btn:first-child { border-radius: 999px 0 0 999px; }
+.graph-hops .graph-btn:last-child { border-radius: 0 999px 999px 0; margin-left: -1px; }
+.graph-zoom { position: absolute; right: 12px; top: 12px; display: flex; flex-direction: column; gap: 6px; }
+.graph-btn--icon {
+  width: 34px; height: 34px; padding: 0; display: inline-flex; align-items: center; justify-content: center;
+  font-size: 19px; font-weight: 500;
+}
+
+/* ---------- reading panel ---------- */
+.panel-content { padding: 20px 24px 64px; max-width: 74ch; }
+.panel-empty { color: var(--text-faint); padding-top: 40px; text-align: center; }
+
+.node-head { margin-bottom: 12px; }
+.node-head__eyebrow {
+  display: flex; align-items: center; gap: 8px; font-family: var(--font-mono);
+  color: var(--text-faint); font-size: 0.8em; margin-bottom: 4px; flex-wrap: wrap;
+}
+.node-head__title {
+  font-family: var(--font-read); font-size: 1.4667em; font-weight: 600; margin: 0 0 6px;
+  text-wrap: balance;
+}
+.node-head__title :is(.katex) { font-size: 1em; }
+.node-links { display: flex; gap: 14px; margin: 10px 0 18px; font-size: 0.8667em; }
+.node-links a { color: var(--link); }
+
+.section-label {
+  font-family: var(--font-ui); font-size: 0.8em; font-weight: 600; text-transform: uppercase;
+  letter-spacing: .08em; color: var(--text-faint); margin: 22px 0 8px;
+  display: flex; align-items: center; gap: 8px;
+}
+.section-label::after { content: ""; flex: 1; height: 1px; background: var(--border); }
+
+.prose { font-family: var(--font-read); font-size: 1.1em; line-height: 1.65; }
+.prose .prose { font-size: 1em; }
+.prose p { margin: 0 0 0.9em; }
+.prose .tex-display { margin: 0.9em 0; overflow-x: auto; }
+.prose .tex-nested-statement, .prose .tex-nested-proof {
+  border-left: 3px solid var(--accent-2); background: var(--accent-2-tint);
+  padding: 10px 14px; border-radius: 0 6px 6px 0; margin: 1em 0;
+}
+.prose .tex-nested-head { font-family: var(--font-ui); font-size: 0.7879em; margin: 0 0 6px; }
+/* A sectioning heading inside a quoted prose span (a prose proof may run across
+   subsections), and the pointer that stands in for a figure of the paper. */
+.prose .tex-heading { font-family: var(--font-ui); margin: 1.1em 0 0.5em; }
+.prose .tex-figure-omitted { color: var(--text-dim); font-style: italic; }
+.prose .tex-footnote-marker { color: var(--accent); cursor: help; position: relative; }
+.prose .tex-footnote-body {
+  display: none; position: absolute; bottom: 1.4em; left: 0; width: 19.2em;
+  background: var(--surface); border: 1px solid var(--border); border-radius: 6px;
+  padding: 8px 10px; font-size: 0.7576em; font-family: var(--font-ui); box-shadow: var(--shadow); z-index: 10;
+}
+.prose .tex-footnote-marker:hover .tex-footnote-body,
+.prose .tex-footnote-marker:focus .tex-footnote-body { display: block; }
+.prose .tex-ref, .prose .tex-cite { color: var(--link); text-decoration: none; border-bottom: 1px dotted var(--link); }
+.prose .tex-ref-unlinked { color: var(--text-dim); border-bottom: 1px dotted var(--text-faint); }
+.prose .nt-key, .prose [class*="nt-"] { cursor: pointer; border-bottom: 1px dashed var(--accent-2); }
+
+.step {
+  border: 1px solid var(--border); border-radius: var(--radius); margin: 0 0 12px; overflow: hidden;
+}
+.step__head {
+  display: flex; align-items: center; gap: 8px; padding: 8px 12px; background: var(--surface-2);
+  cursor: pointer; font-family: var(--font-ui); font-weight: 600; font-size: 0.9em;
+}
+.step__head .step__num { font-family: var(--font-mono); color: var(--accent); }
+.step__summary { padding: 8px 12px; font-size: 0.9em; color: var(--text-dim); }
+.step__body { padding: 4px 14px 14px; }
+.step[data-open="false"] .step__body { display: none; }
+
+.uses-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+.uses-list a {
+  display: flex; gap: 8px; padding: 6px 8px; border-radius: 6px; color: var(--text); text-decoration: none;
+  border: 1px solid var(--border); font-size: 0.9em;
+}
+.uses-list a:hover { background: var(--surface-2); }
+.uses-list .uses-list__num { font-family: var(--font-mono); color: var(--text-faint); }
+
+.bib-card { font-family: var(--font-read); font-size: 1em; }
+
+/* ---------- welcome panel (tasks/p5-polish-5.md) ---------- */
+.welcome-panel { max-width: 60ch; }
+.welcome-panel__byline {
+  font-family: var(--font-ui); font-size: 0.8667em; color: var(--text-dim); margin: 0 0 18px;
+}
+.welcome-panel__actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 22px; }
+.welcome-panel__button {
+  display: inline-flex; align-items: center; padding: 10px 18px; border-radius: 999px;
+  font-family: var(--font-ui); font-weight: 600; font-size: 0.9333em; text-decoration: none;
+  background: var(--accent); color: #fff; border: 1px solid var(--accent);
+}
+.welcome-panel__button:hover { background: var(--accent-strong); border-color: var(--accent-strong); }
+.welcome-panel__button--ghost { background: transparent; color: var(--text); border-color: var(--border); }
+.welcome-panel__button--ghost:hover { background: var(--surface-2); }
+
+/* ---------- "How to read the graph" (tasks/p18-legend.md): reuses the graph
+   legend's own swatch/arrow CSS classes, so this and the legend never drift
+   apart. ---------- */
+.welcome-panel__how-to-read { margin-top: 24px; }
+.how-to-read__list { list-style: none; margin: 10px 0 16px; padding: 0; }
+.how-to-read__list li {
+  display: flex; align-items: flex-start; gap: 8px; margin: 0 0 7px;
+  font-size: 0.9em; color: var(--text-dim); line-height: 1.4;
+}
+.how-to-read__list li i { margin-top: 4px; flex: none; }
+@media (min-width: 560px) {
+  .how-to-read__list { columns: 2; column-gap: 24px; }
+  .how-to-read__list li { break-inside: avoid; }
+}
+.welcome-panel__how-to-read > p { font-size: 0.9em; color: var(--text-dim); margin: 0 0 8px; }
+
+/* ---------- arXiv link + citation line (tasks/p11-launch.md sec.2) ---------- */
+.topbar__arxiv {
+  font-family: var(--font-mono); font-size: 12px; color: var(--accent-strong);
+  text-decoration: none; white-space: nowrap; padding: 5px 10px;
+  border: 1px solid var(--border); border-radius: 999px; margin-left: auto;
+}
+.topbar__arxiv:hover { text-decoration: underline; }
+.welcome-panel__arxiv { font-size: 0.9em; margin: -8px 0 18px; }
+.welcome-panel__cite {
+  font-size: 0.8333em; color: var(--text-dim); margin-top: 22px;
+  padding-top: 14px; border-top: 1px solid var(--border);
+}
+
+/* ---------- footer (tasks/p11-launch.md sec.3, full site only) ---------- */
+.welcome-panel__footer {
+  margin-top: 28px; padding-top: 14px; border-top: 1px solid var(--border);
+  font-size: 0.8em; color: var(--text-faint); line-height: 1.6;
+}
+.welcome-panel__footer p { margin: 0 0 4px; }
+.welcome-panel__footer a { color: var(--text-faint); text-decoration: underline; }
+
+/* ---------- notation popover ---------- */
+.notation-popover {
+  position: fixed; max-width: min(23.7em, calc(100vw - 16px)); background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius); box-shadow: var(--shadow); padding: 12px 14px; z-index: 100; font-size: calc(13.5px * var(--reading-scale, 1));
+}
+.notation-card__head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; font-family: var(--font-mono); }
+.notation-card__label { font-weight: 600; margin-bottom: 6px; font-family: var(--font-ui); }
+.notation-card__def { font-family: var(--font-mono); background: var(--surface-2); padding: 6px 8px; border-radius: 6px; overflow-x: auto; }
+.notation-card__gloss { margin-top: 8px; color: var(--text-dim); font-family: var(--font-ui); }
+.notation-card__summary { margin-bottom: 8px; color: var(--text-dim); font-family: var(--font-ui); }
+.notation-card__summary p { margin: 0 0 6px; }
+.notation-card__goto {
+  display: inline-block; margin-top: 8px; font-family: var(--font-ui); font-size: 0.9259em;
+  color: var(--accent-strong); text-decoration: none; font-weight: 600;
+}
+.notation-card__goto:hover { text-decoration: underline; }
+
+/* ---------- figures (tasks/p3t-tooling.md sec.3) ---------- */
+.figures { display: flex; flex-direction: column; gap: 16px; margin-bottom: 16px; }
+.figure-card {
+  margin: 0; padding: 12px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface-2);
+  /* A detailed static (TikZ) figure can need more width than a phone
+     screen to stay legible; scroll the card horizontally rather than
+     shrinking such a figure below reading size. Harmless when nothing
+     inside actually overflows. */
+  overflow-x: auto;
+}
+.figure-card__head { display: flex; gap: 6px; margin-bottom: 8px; }
+.figure-mount { min-height: 120px; display: flex; align-items: center; justify-content: center; background: var(--surface); border-radius: 6px; }
+.figure-mount__missing { color: var(--text-faint); font-style: italic; margin: 0; padding: 12px; }
+.figure-static {
+  display: block; max-width: 100%; margin: 0 auto; box-sizing: border-box;
+  /* A compiled TikZ figure is built once per theme (scripts/build_tikz_figures.mjs:
+     <id>.svg light, <id>.dark.svg dark), on the figure ground --fig-bg; the
+     frame shows the one matching the page's theme. */
+  background: var(--fig-bg); border-radius: 6px; padding: 10px;
+}
+.figure-static-frame { background: var(--fig-bg); border-radius: 6px; }
+.figure-static--dark { display: none; }
+:root[data-theme="dark"] .figure-static--light { display: none; }
+:root[data-theme="dark"] .figure-static--dark { display: block; }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .figure-static--light { display: none; }
+  :root:not([data-theme="light"]) .figure-static--dark { display: block; }
+}
+/* Below this width, a dense static diagram (e.g. fig.selection-alternatives'
+   two-panel flowchart) stops shrinking and the card scrolls instead --
+   audit feedback: shrink-to-fit made it illegible at phone widths. */
+@media (max-width: 640px) {
+  .figure-static { max-width: none; width: max(100%, 480px); }
+}
+.figure-card figcaption { margin-top: 8px; font-size: 0.8667em; color: var(--text-dim); font-family: var(--font-ui); }
+.figure-params { margin-top: 6px; font-size: 0.8em; color: var(--text-faint); }
+.figure-params pre { font-family: var(--font-mono); background: var(--surface); padding: 6px 8px; border-radius: 6px; overflow-x: auto; }
+/* parameters.illustration (a toy run's facts) as a readable list. */
+.figure-params > summary { cursor: pointer; display: inline-flex; align-items: center; gap: 6px; }
+.figure-params__list { margin: 6px 0 0; padding: 0; list-style: none; display: grid; gap: 3px; color: var(--text-dim); font-family: var(--font-ui); }
+.figure-params__list li { line-height: 1.4; }
+.figure-params__name { font-family: var(--font-mono); color: var(--text); }
+.figure-params__value { font-family: var(--font-mono); color: var(--text); }
+.figure-params__desc { color: var(--text-faint); }
+
+/* ---------- figure pop-out (tasks/p9a-figure-popout.md) ---------- */
+/* tasks/p17-figure-feedback.md: a clearly labelled "Enlarge" button (icon and
+   word) at the right of every figure card's head; the enlarged figure takes the
+   full viewport width. */
+.figure-enlarge-btn {
+  margin-left: auto; flex: 0 0 auto; display: inline-flex; align-items: center; gap: 6px;
+  padding: 5px 12px; border: 1px solid var(--accent-strong); border-radius: 999px;
+  background: var(--surface); color: var(--accent-strong); cursor: pointer;
+  font-family: var(--font-ui); font-size: 13px; font-weight: 600; line-height: 1.2;
+}
+.figure-enlarge-btn:hover { background: var(--accent-strong); color: var(--surface); }
+.figure-enlarge-btn:focus-visible, .figure-modal__close:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+/* Above the figure: KaTeX's invisible, positioned struts in a figure's own
+   control row can otherwise reach up over the button and take its clicks. */
+.figure-card__head { flex-wrap: wrap; align-items: center; position: relative; z-index: 1; }
+/* The visible caption (title and lead claims) and the closed "Full explanation". */
+.figure-caption__lead { margin: 0; color: var(--text); line-height: 1.5; }
+.figure-caption__more { margin-top: 6px; }
+.figure-caption__more > summary {
+  cursor: pointer; color: var(--accent-strong); font-weight: 600; width: fit-content;
+}
+.figure-caption__more > p { margin: 6px 0 0; line-height: 1.5; }
+/* `<dialog>` centers itself in the viewport by UA default; the explicit
+   size is the "fills most of the window" brief -- 94vw/92vh on a desktop,
+   the full screen on a phone (below). */
+.figure-modal {
+  width: 100vw; max-width: 100vw; height: 100vh; max-height: 100vh; box-sizing: border-box;
+  margin: 0; padding: 12px 16px; display: flex; flex-direction: column; gap: 10px;
+  border: 0; border-radius: 0; background: var(--surface-2); color: var(--text);
+}
+.figure-modal::backdrop { background: rgba(10, 14, 18, 0.55); }
+.figure-modal:not([open]) { display: none; }
+.figure-modal__head { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex: 0 0 auto; }
+.figure-modal__title { margin: 0; font-family: var(--font-ui); font-size: 16px; font-weight: 600; }
+.figure-modal__close {
+  flex: 0 0 auto; display: inline-flex; align-items: center; gap: 6px; padding: 6px 14px;
+  border: 1px solid var(--border); border-radius: 999px; background: var(--surface); color: var(--text);
+  cursor: pointer; font-family: var(--font-ui); font-size: 14px; font-weight: 600; line-height: 1;
+}
+.figure-modal__close > span { font-size: 18px; }
+.figure-modal__close:hover { background: var(--surface-3, var(--surface)); }
+.figure-modal__figure {
+  margin: 0; flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; overflow: auto;
+}
+/* WIDTH FIRST (tasks/p9b follow-up): inside the dialog a figure takes the
+   dialog's full width -- a figure that picks its layout from its own width
+   (measuredWidth + ResizeObserver) re-lays out to its WIDE layout there --
+   and keeps its natural height; site/app.js (fitFigurePopout) then scales the
+   drawing down to the dialog's height when it is taller -- never below its
+   size in the card -- and the caption scrolls below it.
+   A figure module either wraps itself in `.d3-figure` (a flex column) or
+   appends loose children (banner, controls, a host div holding the one
+   <svg>) straight into the mount: stack them, full width, natural height. */
+.figure-modal__figure .figure-mount {
+  display: flex; flex-direction: column; align-items: stretch; gap: 10px;
+  flex: 0 0 auto; width: 100%; box-sizing: border-box;
+}
+.figure-modal__figure .figure-mount > *,
+.figure-modal__figure .figure-mount .d3-figure > * { flex: 0 0 auto; }
+/* !important: site/figures/lib/svgkit.mjs's makeSvg sets an INLINE
+   style="width:100%;height:auto" (and d3-built SVGs a width attribute);
+   the dialog restates exactly that, full width with the height following
+   the viewBox's aspect ratio, so no other rule can squeeze the drawing. */
+.figure-modal__figure .figure-mount svg { width: 100% !important; height: auto !important; max-width: 100%; }
+.figure-modal__figure .figure-img-frame { flex: 0 0 auto; }
+/* A TikZ diagram's own aspect ratio can be much taller than wide
+   (fig.selection-alternatives' two stacked panels): full width, natural
+   height, and the dialog scrolls to the rest. */
+.figure-modal__figure .figure-static { flex: 0 0 auto; width: 100%; height: auto; max-width: 100%; margin: 0 auto; }
+.figure-modal__figure figcaption {
+  flex: 0 0 auto; margin-top: 10px; font-size: 14.5px; color: var(--text-dim);
+  font-family: var(--font-ui); max-width: 72em;
+}
+@media (max-width: 640px) {
+  .figure-modal { padding: 10px; }
+}
+
+/* ---------- D3 figure chrome (tasks/p4-build.md): controls and legends a
+   site/figures/<id>.js module builds itself alongside its single root
+   <svg> -- the drawing carries its own theme-token colours, this styles
+   only the surrounding HTML (sliders, mode switches, legends). */
+.d3-figure { display: flex; flex-direction: column; gap: 10px; width: 100%; }
+.fig-controls { display: flex; flex-wrap: wrap; gap: 10px 18px; font-family: var(--font-ui); font-size: 12px; }
+.fig-control { display: inline-flex; align-items: center; gap: 6px; color: var(--text-dim); }
+.fig-control__label { white-space: nowrap; }
+.fig-control__value { font-family: var(--font-mono); min-width: 2.4em; text-align: right; color: var(--text); }
+.fig-control--range input[type="range"] { accent-color: var(--accent); }
+.fig-control--buttons { gap: 4px; }
+.fig-btn {
+  font: inherit; font-family: var(--font-ui); font-size: 12px; padding: 3px 9px; border-radius: 999px;
+  border: 1px solid var(--border); background: var(--surface); color: var(--text-dim); cursor: pointer;
+}
+.fig-btn.is-active { background: var(--accent); border-color: var(--accent); color: #fff; }
+.fig-legend__item { display: inline-flex; align-items: center; gap: 5px; margin-right: 12px; font-size: 12px; color: var(--text-dim); }
+.fig-legend__swatch { display: inline-block; width: 12px; height: 12px; border-radius: 3px; }
+/* The controls built by site/figures/lib/theme.mjs (makeSliderControl,
+   makeSelectControl, makeButtonControl; fig.polynomial-entry,
+   fig.determinant-ledger, fig.retained-histories, fig.counting-scales):
+   the same look as the svgkit .fig-controls family above. */
+.figure-banner { margin: 0; font-family: var(--font-ui); font-size: 13px; color: var(--text-dim); }
+/* A D3 figure's own closed "Details" (tasks/p17-figure-feedback.md:
+   fig.from-six-to-four's readout table). */
+.figure-details { font-family: var(--font-ui); font-size: 13px; color: var(--text-dim); }
+.figure-details > summary { cursor: pointer; color: var(--accent-strong); font-weight: 600; width: fit-content; }
+.figure-table { margin-top: 8px; border-collapse: collapse; color: var(--text); }
+.figure-table th, .figure-table td { padding: 3px 12px 3px 0; text-align: left; border-bottom: 1px solid var(--border); font-weight: normal; }
+.figure-table thead th { color: var(--text-dim); }
+.figure-table tbody th { font-weight: 600; }
+.figure-table__notes p { margin: 6px 0 0; }
+.figure-controls { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 18px; font-family: var(--font-ui); font-size: 13px; }
+.figure-control { display: inline-flex; align-items: center; gap: 6px; color: var(--text-dim); font-size: 13px; }
+.figure-control label { white-space: nowrap; }
+.figure-control output { font-family: var(--font-mono); min-width: 2.4em; text-align: right; color: var(--text); white-space: nowrap; }
+.figure-control output.vp-fig-tex-html { font-family: var(--font-ui); text-align: left; }
+.figure-control--slider input[type="range"] { accent-color: var(--accent); }
+.figure-control select {
+  font: inherit; font-family: var(--font-ui); font-size: 12px; padding: 2px 6px; border-radius: 6px;
+  border: 1px solid var(--border); background: var(--surface); color: var(--text);
+}
+button.figure-control--button {
+  font: inherit; font-family: var(--font-ui); font-size: 12px; padding: 3px 9px; border-radius: 999px;
+  border: 1px solid var(--border); background: var(--surface); color: var(--text-dim); cursor: pointer;
+}
+button.figure-control--button:hover { color: var(--text); border-color: var(--text-faint); }
+button.figure-control--button[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: #fff; }
+.figure-toy-constants { font-family: var(--font-ui); font-size: 12px; color: var(--text-dim); }
+.figure-toy-constants > summary { cursor: pointer; }
+.figure-toy-constants > code { display: block; margin-top: 4px; font-size: 12px; white-space: normal; }
+
+/* ---------- cytoscape node/edge chrome (compound labels via HTML overlay
+   are avoided; cytoscape draws labels itself, styled from app.js) ---------- */
+
+/* ---------- responsive ---------- */
+@media (max-width: 900px) {
+  .layout { --panel-pct: 45; }
+}
+/* Tablet: the search box would be squeezed to a few characters beside the
+   title and the actions, so it takes its own row. */
+@media (min-width: 701px) and (max-width: 1100px) {
+  .topbar { flex-wrap: wrap; gap: 8px 16px; }
+  .topbar__brand { flex: 1 1 auto; }
+  .topbar__search { order: 3; flex: 1 1 100%; max-width: none; }
+  .topbar__search input { padding: 6px 12px; }
+}
+
+@media (max-width: 700px) {
+  .tabbar { display: flex; }
+  .layout { flex-direction: column; }
+  .pane--graph, .pane--panel { flex: 1 1 auto; width: 100%; }
+  .pane--graph { display: none; }
+  .pane--panel { display: none; }
+  body[data-pane="graph"] .pane--graph { display: block; }
+  body[data-pane="panel"] .pane--panel { display: block; }
+  .graph-zoom, .graph-legend { display: none; }
+  /* The graph toolbar itself stays (its Back/Forward buttons must still
+     show in the Graph tab, tasks/p16 "Back" button); only the parts that
+     control the graph -- meaningless once #cy is replaced by #outline at
+     this width -- are hidden. */
+  .graph-toolbar .graph-btn--map, .graph-toolbar .graph-hops, .graph-toolbar .graph-hint { display: none; }
+  .reading-panel__back { display: inline-flex; align-items: center; gap: 4px; margin: 10px 12px 0; }
+  .topbar { flex-wrap: wrap; gap: 6px 10px; padding: 6px 12px; }
+  .topbar__brand { flex: 1 1 100%; }
+  .topbar__kicker { display: none; }
+  .topbar__mark { font-size: 18px; }
+  .topbar__title { font-size: 16px; }
+  .topbar__actions { gap: 8px; margin-left: 0; }
+  .topbar__search { order: 3; flex: 1 1 140px; max-width: none; }
+  .topbar__search input { padding: 5px 12px; }
+  /* Phone app shell: the page never scrolls; the shown pane fills what is
+     left below the top bar and tab bar, and scrolls itself. */
+  html, body { overflow: hidden; height: 100%; height: 100dvh; }
+  .layout { min-height: 0; }
+  .pane--graph, .pane--panel { flex: 1 1 auto; min-height: 0; height: auto; }
+  .pane--panel { overflow-y: auto; }
+  body[data-pane="graph"] .pane--graph { display: flex; flex-direction: column; }
+  /* The toolbar (Back/Forward) sits above the outline, not over it. */
+  .graph-toolbar { position: static; order: -1; padding: 8px 12px 4px; flex: 0 0 auto; }
+  .outline { position: relative; inset: auto; flex: 1 1 auto; min-height: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * { animation-duration: 0.001ms !important; transition-duration: 0.001ms !important; }
+}
+
+/* ---------- external-source external source (tasks/p7a-tooling.md sec.6) ---------- */
+.badge--xsrc { background: var(--xsrc-tint); color: var(--xsrc); text-transform: none; }
+.badge--background { background: var(--background-node-tint); color: var(--background-node); text-transform: none; }
+.badge--implicit { background: transparent; color: var(--background-node); border: 1px solid var(--background-node); text-transform: none; }
+.node-head__eyebrow .badge + .badge { margin-left: 6px; }
+.xsrc-note { font-family: var(--font-ui); font-size: 0.8333em; color: var(--text-dim); margin: 6px 0 0; }
+.xsrc-note a { color: var(--xsrc); }
+.xsrc-quote { border-left: 3px solid var(--xsrc); padding-left: 12px; }
+.xsrc-quote + .xsrc-quote { margin-top: 12px; }
+.xsrc-pointer { font-family: var(--font-ui); font-size: 0.9em; color: var(--text-dim); }
+.xsrc-details { margin: 8px 0 4px; }
+.xsrc-details > summary { cursor: pointer; font-family: var(--font-ui); font-size: 0.9em; color: var(--text-dim); }
+.xsrc-details[open] > summary { margin-bottom: 8px; }
+.legend-swatch--xsrc { background: var(--xsrc-tint); border: 1px dotted var(--xsrc); }
+.legend-swatch--background { background: var(--background-node-tint); border: 1px dashed var(--background-node); }
+
+/* The paper's own sentences around its external-source citations (tasks/p7a-tooling.md follow-up). */
+.vp-cites { display: flex; flex-direction: column; gap: 12px; }
+.vp-cite { margin: 0; }
+.vp-quote { margin: 0; border-left: 3px solid var(--border); padding-left: 12px; }
+.vp-quote p { margin: 0; }
+.vp-quote--clip-start > :first-child::before { content: "[…] "; color: var(--text-faint); }
+.vp-quote--clip-end > :last-child::after { content: " […]"; color: var(--text-faint); }
+.vp-cite__where { font-family: var(--font-ui); font-size: 0.8333em; color: var(--text-dim); margin-top: 4px; }
+
+/* ---------- reading mode (tasks/p13-reading-mode.md; site/readingmode.mjs) ----------
+   Top-bar controls (text size A-/A/A+, "Hide graph"), the draggable divider
+   between the panes, and the graph-hidden layout. The panel's own text
+   sizes above are in em, so --reading-scale alone scales body text,
+   headings, KaTeX (its .katex rule is 1.21em), captions and badges; the
+   notation popover reads the same property. */
+.pane--panel .badge { font-size: 0.7333em; }
+.pane--panel .node-head__eyebrow .badge { font-size: 0.9167em; }
+
+.reading-size { display: inline-flex; }
+.reading-btn {
+  font: inherit; font-size: 13px; font-weight: 500; line-height: 1; height: 30px; padding: 0 12px;
+  border: 1px solid var(--border); background: var(--surface-2); color: var(--text);
+  border-radius: 999px; cursor: pointer; white-space: nowrap;
+}
+.reading-btn:hover:not(:disabled) { background: var(--surface-3); }
+.reading-btn:disabled { color: var(--text-faint); cursor: default; }
+.reading-size__btn { border-radius: 0; padding: 0 8px; font-family: var(--font-read); font-size: 13px; }
+.reading-size__btn + .reading-size__btn { margin-left: -1px; }
+.reading-size__btn:first-child { border-radius: 999px 0 0 999px; padding-left: 11px; }
+.reading-size__btn:last-child { border-radius: 0 999px 999px 0; padding-right: 11px; }
+.reading-size__reset { font-size: 15px; font-weight: 600; }
+.reading-graph-toggle[aria-pressed="true"] {
+  background: var(--accent-tint); border-color: var(--accent); color: var(--accent-strong);
+}
+
+/* The divider IS the 1px border between the panes; a wider invisible hit
+   area (::after) and a grip (::before) that shows on hover, focus and drag. */
+.pane-divider {
+  flex: 0 0 1px; width: 1px; position: relative; z-index: 6;
+  background: var(--border); cursor: col-resize; touch-action: none;
+}
+.pane-divider::after { content: ""; position: absolute; top: 0; bottom: 0; left: -5px; right: -5px; }
+.pane-divider::before {
+  content: ""; position: absolute; top: 50%; left: -2px; width: 5px; height: 40px; margin-top: -20px;
+  border-radius: 999px; background: var(--accent); opacity: 0; transition: opacity .15s ease;
+}
+.pane-divider:hover, .pane-divider:focus-visible, body[data-resizing] .pane-divider { background: var(--accent); }
+.pane-divider:hover::before, .pane-divider:focus-visible::before, body[data-resizing] .pane-divider::before { opacity: 1; }
+.pane-divider:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
+body[data-resizing] { cursor: col-resize; user-select: none; -webkit-user-select: none; }
+body[data-resizing] .pane { pointer-events: none; }
+
+@media (min-width: 701px) {
+  body[data-graph-hidden] .pane--graph,
+  body[data-graph-hidden] .pane-divider { display: none; }
+  body[data-graph-hidden] .pane--panel { flex: 1 1 auto; }
+  body[data-graph-hidden] .panel-content { margin-inline: auto; }
+}
+@media (max-width: 700px) {
+  .pane-divider, .reading-graph-toggle { display: none; }
+  .reading-btn { height: 28px; }
+}
+
+
+/* Expanded graph (readingmode.mjs): the graph takes the whole width. */
+@media (min-width: 701px) {
+  body[data-graph-expanded] .pane--panel,
+  body[data-graph-expanded] .pane-divider { display: none; }
+  body[data-graph-expanded] .pane--graph { flex: 1 1 auto; border-right: 0; }
+}
+@media (max-width: 700px) {
+  .graph-btn--expand { display: none; }
+}
+
+/* The desktop layout is an app shell: only the panes scroll, never the page. Without
+   this, at some browser zoom levels the graph canvas (sized in whole pixels) overflows
+   its fractional-pixel pane by a pixel, the page's scrollbars appear, the graph shrinks
+   and re-fits, the scrollbars disappear, and the page shakes. */
+@media (min-width: 701px) {
+  html, body { overflow: hidden; }
+  .pane--graph, .cy-canvas { overflow: hidden; }
+}
+
+/* ---------- Main results / Full graph (tasks/p17-essentials.md, p18-legend.md);
+   internally still "essentials"/"everything" (data-graph-tiers, localStorage). The
+   legend follows the current view -- which box/arrow types it shows depends on
+   data-graph-tiers (essentials/everything) and data-graph-mode (map/cluster/focus),
+   both set by graphnav.mjs's syncControls. Before the graph script runs, the plain
+   "A -> B" row and the box types common to every view show; the rest wait for it. ---------- */
+.graph-tiers { display: inline-flex; }
+.graph-tiers .graph-btn:first-child { border-radius: 999px 0 0 999px; }
+.graph-tiers .graph-btn:last-child { border-radius: 0 999px 999px 0; margin-left: -1px; }
+/* Theorem/Major result can appear even on the Main results whole map (it
+   draws only the majors and the skeleton), so that row has no condition -- it
+   always shows. */
+.graph-legend__row--skeleton-arrow,
+.graph-legend__row--sections,
+.graph-legend__row--context,
+.graph-legend__row--xsrc { display: none; }
+/* The thick skeleton arrow is drawn only on the Main results whole map. */
+.pane--graph[data-graph-tiers="essentials"][data-graph-mode="map"] .graph-legend__row--skeleton-arrow { display: flex; }
+/* Definitions, external inputs, external-source items, Background nodes, a selection/focus
+   outline and fading never appear in Main results except inside a focus (a Main
+   results map or opened section never draws any of them) -- everywhere else
+   (a focus, Full graph) they can. */
+.pane--graph[data-graph-tiers="everything"] .graph-legend__row--context,
+.pane--graph[data-graph-mode="focus"] .graph-legend__row--context { display: flex; }
+/* Closed section/subsection boxes are drawn only in Full graph, and not inside a
+   focus (a focus never shows a raw section or subsection). */
+.pane--graph[data-graph-tiers="everything"]:not([data-graph-mode="focus"]) .graph-legend__row--sections { display: flex; }
+.legend-swatch--major { background: var(--surface); border: 2px solid var(--accent); width: 12px; height: 12px; }
+.legend-swatch--definition { background: var(--surface-2); border: 1px solid var(--border); }
+.legend-outline {
+  display: inline-block; width: 12px; height: 12px; border-radius: 3px;
+  background: var(--surface); border: 2px solid var(--focus-ring);
+}
+/* A line sample drawn like the graph's one arrow style (site/graphnav.mjs). */
+.legend-arrow {
+  display: inline-block; position: relative; width: 22px; height: 0; margin-right: 6px;
+  border-top: 1.6px solid var(--text-dim); vertical-align: middle;
+}
+.legend-arrow::after {
+  content: ""; position: absolute; right: -1px; top: -4px;
+  border-left: 6px solid var(--text-dim); border-top: 4px solid transparent; border-bottom: 4px solid transparent;
+}
+.legend-arrow--hl { border-top: 2.4px solid var(--accent); }
+.legend-arrow--hl::after { border-left-color: var(--accent); }
+.legend-arrow--mutual::before {
+  content: ""; position: absolute; left: -1px; top: -4px;
+  border-right: 6px solid var(--text-dim); border-top: 4px solid transparent; border-bottom: 4px solid transparent;
+}
+/* A skeleton arrow's hover card: the hidden results it passes through. */
+.graph-tip {
+  position: absolute; z-index: 5; max-width: 320px; pointer-events: none;
+  background: var(--surface); color: var(--text); border: 1px solid var(--border); border-radius: var(--radius);
+  box-shadow: var(--shadow); padding: 6px 10px; font-size: 12.5px; line-height: 1.4;
+}
+.graph-tip[hidden] { display: none; }
+/* Phone outline: major results stand out. */
+.outline .outline__major > button { font-weight: 600; box-shadow: inset 3px 0 0 var(--accent); }
+.outline__tag {
+  margin-left: 6px; font-size: 11px; font-weight: 600; color: var(--accent-strong);
+  border: 1px solid var(--accent); border-radius: 999px; padding: 0 6px; white-space: nowrap;
+}
+.outline .outline__background > button { color: var(--text-dim); font-size: 0.93em; }
+@media (max-width: 700px) {
+  .graph-toolbar .graph-tiers { display: none; }
+}
+
+/* external-source items and the facts taken from the external source appear only with "Show external-source links" on. */
+.pane--graph[data-xsrc-shown="true"] .graph-legend__row--xsrc { display: flex; }
+.graph-legend__help { background: none; border: 0; padding: 0; font: inherit; font-size: 12px; color: var(--accent); cursor: pointer; text-decoration: underline; text-underline-offset: 2px; }
+
+/* Wide displays scroll inside the reading panel, and an equation number (\tag)
+   follows its display instead of being drawn over a long one. */
+.prose .katex-display { overflow-x: auto; overflow-y: hidden; padding: 1px 0; }
+.prose .katex-display > .katex > .katex-html { display: flex; align-items: baseline; white-space: nowrap; }
+.prose .katex-display > .katex > .katex-html::before { content: ""; flex: 1 1 0; }
+.prose .katex-display > .katex > .katex-html > .katex-base { flex: none; }
+.prose .katex-display > .katex > .katex-html > .katex-tag { position: static; flex: 1 1 0; text-align: right; padding-left: 1.25em; }

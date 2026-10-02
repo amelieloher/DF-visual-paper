@@ -1,0 +1,168 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Döblin–Fourier cancellation and kinetic Aleksandrov estimates — visual companion</title>
+<meta name="description" content="An interactive companion to the paper by Loher, Mooney and Mouhot: the dependency graph of the proofs, exact statements, step-by-step proofs and notation.">
+<!-- scripts/build.mjs's writeSiteAssets rewrites
+     both tags above from content/site.yaml and appends canonical/Open
+     Graph/Twitter/favicon tags just before the closing head tag; this
+     file's own copies are the fallback for opening it unbuilt. -->
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,400;8..60,600;8..60,700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="vendor/katex.min.css">
+<link rel="stylesheet" href="app.css">
+<link rel="stylesheet" href="downloads.css">
+<link rel="canonical" href="https://amelieloher.github.io/DF-visual-paper/">
+<meta property="og:url" content="https://amelieloher.github.io/DF-visual-paper/">
+<link rel="icon" type="image/svg+xml" href="favicon.svg">
+<link rel="icon" type="image/png" href="favicon.png">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Döblin–Fourier cancellation and kinetic Aleksandrov estimates — visual companion">
+<meta property="og:description" content="An interactive companion to the paper by Loher, Mooney and Mouhot: the dependency graph of the proofs, exact statements, step-by-step proofs and notation.">
+<meta property="og:image" content="https://amelieloher.github.io/DF-visual-paper/og-image.png">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Döblin–Fourier cancellation and kinetic Aleksandrov estimates — visual companion">
+<meta name="twitter:description" content="An interactive companion to the paper by Loher, Mooney and Mouhot: the dependency graph of the proofs, exact statements, step-by-step proofs and notation.">
+<meta name="twitter:image" content="https://amelieloher.github.io/DF-visual-paper/og-image.png">
+</head>
+<body>
+<a class="skip-link" href="#panel">Skip to reading panel</a>
+
+<header class="topbar">
+  <button type="button" class="topbar__brand" aria-label="Show the welcome panel">
+    <span class="topbar__mark" aria-hidden="true">◇</span>
+    <div class="topbar__titles">
+      <span class="topbar__kicker">Visual paper</span>
+      <h1 class="topbar__title">Visual paper</h1>
+    </div>
+  </button>
+  <div class="topbar__search">
+    <label class="sr-only" for="search-input">Search titles, labels and numbers</label>
+    <input id="search-input" type="text" placeholder="Search titles, labels and numbers, e.g. 3.2 &hellip;" autocomplete="off">
+    <div id="search-results" class="search-results" hidden></div>
+  </div>
+  <a id="topbar-arxiv-link" class="topbar__arxiv" href="#" hidden>arXiv:</a>
+  <div class="topbar__actions">
+    <span id="dev-indicator" class="badge badge--dev" hidden>dev</span>
+    <details class="pdf-dl" data-pdf-downloads>
+    <summary class="reading-btn pdf-dl__btn" title="Download the paper or the companion manuscript as PDF"><span class="pdf-dl__long">Download&nbsp;</span>PDF</summary>
+    <ul class="pdf-dl__list" aria-label="PDF downloads">
+      <li><a class="pdf-dl__link" href="pdf/main-4.pdf" download="Loher-Mooney-Mouhot-Doeblin-Fourier-kinetic-Aleksandrov.pdf" type="application/pdf"><span class="pdf-dl__name">Paper (PDF)</span><span class="pdf-dl__meta">0.8&nbsp;MB</span></a></li>
+      <li><a class="pdf-dl__link" href="pdf/kinetic-aleksandrov.pdf" download="Loher-Mooney-Mouhot-From-Doeblin-to-Aleksandrov-companion.pdf" type="application/pdf"><span class="pdf-dl__name">Companion manuscript (PDF)</span><span class="pdf-dl__meta">1.1&nbsp;MB</span></a></li>
+    </ul>
+  </details>
+    <div class="reading-size" role="group" aria-label="Text size" data-reading="text-size">
+      <button type="button" class="reading-btn reading-size__btn" data-reading="text-smaller" aria-label="Smaller text" title="Smaller text">A&minus;</button>
+      <button type="button" class="reading-btn reading-size__btn reading-size__reset" data-reading="text-reset" aria-label="Text size 100%; reset to 100%" title="Text size 100% (click to reset)">A</button>
+      <button type="button" class="reading-btn reading-size__btn" data-reading="text-larger" aria-label="Larger text" title="Larger text">A+</button>
+    </div>
+    <button type="button" class="reading-btn reading-graph-toggle" data-reading="toggle-graph" aria-pressed="false" title="Hide the dependency graph (g)">Hide graph</button>
+    <button id="theme-toggle" type="button" class="icon-button" aria-label="Toggle light/dark theme" title="Toggle theme">
+      <span class="theme-toggle__icon" aria-hidden="true">◐</span>
+    </button>
+  </div>
+</header>
+
+<nav class="tabbar" aria-label="Panes">
+  <button type="button" class="tabbar__btn is-active" data-pane="graph">Graph</button>
+  <button type="button" class="tabbar__btn" data-pane="panel">Reading panel</button>
+</nav>
+
+<main class="layout">
+  <section id="graph-pane" class="pane pane--graph" aria-label="Dependency graph">
+    <div id="cy" class="cy-canvas" tabindex="0" aria-label="Dependency graph. Plus and minus zoom, 0 fits the view."></div>
+    <div id="outline" class="outline" hidden></div>
+    <div class="graph-toolbar" role="toolbar" aria-label="Graph view">
+      <button type="button" class="graph-btn graph-btn--history" data-history-nav="back" aria-label="Back to the previous view (Alt+&larr;)" title="Back to the previous view (Alt+&larr;)">&larr; Back</button>
+      <button type="button" class="graph-btn graph-btn--history" data-history-nav="forward" aria-label="Forward to the next view (Alt+&rarr;)" title="Forward to the next view (Alt+&rarr;)">Forward &rarr;</button>
+      <button type="button" class="graph-btn graph-btn--map" data-graph-action="whole-map" title="Back to the map of sections and theorems">Whole map</button>
+      <div class="graph-tiers" role="group" aria-label="How much of the graph to show" data-graph-view-switch>
+        <button type="button" class="graph-btn" data-graph-action="view-essentials" aria-pressed="true" title="The main results and how each is used to prove the next">Main results</button>
+        <button type="button" class="graph-btn" data-graph-action="view-everything" aria-pressed="false" title="Every result, definition and link">Full graph</button>
+      </div>
+      <div class="graph-hops" role="group" aria-label="How far to follow links" data-graph-hops hidden>
+        <button type="button" class="graph-btn" data-graph-action="hops-1" aria-pressed="true">Direct links</button>
+        <button type="button" class="graph-btn" data-graph-action="hops-2" aria-pressed="false">One step further</button>
+      </div>
+      <p class="graph-hint" data-graph-hint>Click a section to open it, and again to close it. Click a result to see what it uses and what uses it.</p>
+    </div>
+    <div class="graph-zoom" role="toolbar" aria-label="Zoom" aria-orientation="vertical">
+      <button type="button" class="graph-btn graph-btn--icon" data-graph-action="zoom-in" aria-label="Zoom in" title="Zoom in (+)">+</button>
+      <button type="button" class="graph-btn graph-btn--icon" data-graph-action="zoom-out" aria-label="Zoom out" title="Zoom out (&minus;)">&minus;</button>
+      <button type="button" class="graph-btn graph-btn--icon" data-graph-action="fit" aria-label="Fit the view" title="Fit the view (0)"><svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><rect x="4" y="4" width="8" height="8" rx="1.2" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M8 0.8v2.4M8 12.8v2.4M0.8 8h2.4M12.8 8h2.4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></button>
+      <button type="button" class="graph-btn graph-btn--icon graph-btn--expand" data-reading="expand-graph" aria-pressed="false" aria-label="Expand the graph to the full width" title="Expand the graph (f); Esc to return"><svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path d="M2 6V2h4M10 2h4v4M14 10v4h-4M6 14H2v-4" fill="none" stroke="currentColor" stroke-width="1.6"/></svg></button>
+      <button type="button" class="graph-btn graph-btn--icon" data-graph-action="zoom-selection" aria-label="Zoom to the selection" title="Zoom to the selection"><svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><circle cx="8" cy="8" r="5.2" fill="none" stroke="currentColor" stroke-width="1.6"/><circle cx="8" cy="8" r="1.8" fill="currentColor"/></svg></button>
+    </div>
+    <div class="graph-legend" data-graph-legend>
+      <button type="button" class="graph-legend__head" data-graph-action="legend-toggle" aria-expanded="true" aria-controls="graph-legend-body">
+        <i class="graph-legend__chevron" aria-hidden="true"></i>Legend
+      </button>
+      <div class="graph-legend__body" id="graph-legend-body">
+        <div class="graph-legend__row">
+          <span aria-hidden="true"><i class="legend-swatch legend-swatch--theorem"></i>Theorem</span>
+          <span aria-hidden="true"><i class="legend-swatch legend-swatch--major"></i>Major result</span>
+        </div>
+        <div class="graph-legend__row graph-legend__row--context">
+          <span aria-hidden="true"><i class="legend-swatch legend-swatch--result"></i>Supporting result</span>
+          <span aria-hidden="true"><i class="legend-swatch legend-swatch--definition"></i>Definition</span>
+          <span aria-hidden="true"><i class="legend-swatch legend-swatch--ext"></i>Other paper cited</span>
+        </div>
+        <div class="graph-legend__row graph-legend__row--xsrc">
+          <span aria-hidden="true"><i class="legend-swatch legend-swatch--xsrc"></i>Result quoted from the <span data-ext-name>external source</span></span>
+          <span aria-hidden="true"><i class="legend-swatch legend-swatch--background"></i>Fact from the <span data-ext-name>external source</span> not stated in this paper</span>
+        </div>
+        <div class="graph-legend__row graph-legend__row--sections">
+          <span aria-hidden="true"><i class="legend-swatch legend-swatch--section"></i>Section</span>
+          <span aria-hidden="true"><i class="legend-swatch legend-swatch--subsection"></i>Subsection</span>
+        </div>
+        <div class="graph-legend__row">
+          <span class="graph-legend__key"><i class="legend-arrow" aria-hidden="true"></i>A &rarr; B: A is used in the proof of B</span>
+        </div>
+        <div class="graph-legend__row">
+          <span class="graph-legend__key"><i class="legend-arrow legend-arrow--hl" aria-hidden="true"></i>the arrows of the box you point at or selected</span>
+        </div>
+        <div class="graph-legend__row graph-legend__row--sections">
+          <span class="graph-legend__key"><i class="legend-arrow legend-arrow--mutual" aria-hidden="true"></i>two sections each using the other</span>
+        </div>
+        <div class="graph-legend__row">
+          <button type="button" class="graph-legend__help" data-graph-action="help">What the boxes and arrows mean &rarr;</button>
+        </div>
+        <div class="graph-legend__row graph-legend__row--xsrc-toggle">
+          <label class="graph-legend__toggle"><input type="checkbox" data-graph-xsrc> Show <span data-ext-tag>external</span> links</label>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div class="pane-divider" role="separator" tabindex="0" aria-orientation="vertical" aria-controls="panel" aria-label="Resize the reading panel (arrow keys; double-click to reset)" aria-valuemin="25" aria-valuemax="85" aria-valuenow="40"></div>
+
+  <section id="panel" class="pane pane--panel" aria-label="Reading panel" tabindex="-1">
+    <button type="button" class="graph-btn graph-btn--history reading-panel__back" data-history-nav="back" aria-label="Back to the previous view (Alt+&larr;)" title="Back to the previous view (Alt+&larr;)">&larr; Back</button>
+    <div id="panel-content" class="panel-content">
+      <div class="panel-empty">
+        <p>Select a node in the graph, or search above, to read its statement and proof.</p>
+      </div>
+    </div>
+  </section>
+</main>
+
+<div id="notation-popover" class="notation-popover" hidden role="dialog" aria-label="Notation"></div>
+
+<dialog id="figure-modal" class="figure-modal" aria-labelledby="figure-modal-title">
+  <div class="figure-modal__head">
+    <h2 id="figure-modal-title" class="figure-modal__title"></h2>
+    <button type="button" class="figure-modal__close" title="Close (Esc)"><span aria-hidden="true">&times;</span> Close</button>
+  </div>
+  <figure id="figure-modal-figure" class="figure-modal__figure"></figure>
+</dialog>
+
+<script src="vendor/cytoscape.min.js"></script>
+<script src="vendor/cytoscape-dagre.min.js"></script>
+<script src="vendor/d3.min.js"></script>
+<script src="vendor/katex.min.js"></script>
+<script src="macros.js"></script>
+<script src="downloads.js"></script>
+<script type="module" src="app.js"></script>
+</body>
+</html>

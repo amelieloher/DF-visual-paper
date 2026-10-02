@@ -1,0 +1,44 @@
+/* "Download PDF" in the top bar (scripts/lib/paperPdf.mjs renderDownloadMenu,
+   site/downloads.js). Theme tokens only, so both themes follow. */
+.pdf-dl { position: relative; }
+.pdf-dl__btn {
+  display: inline-flex; align-items: center; list-style: none; user-select: none;
+}
+.pdf-dl__btn::-webkit-details-marker { display: none; }
+.pdf-dl__btn::marker { content: ""; }
+.pdf-dl__btn::after {
+  content: ""; width: 0; height: 0; margin-left: 7px;
+  border-left: 4px solid transparent; border-right: 4px solid transparent;
+  border-top: 5px solid currentColor;
+}
+.pdf-dl[open] > .pdf-dl__btn {
+  background: var(--accent-tint); border-color: var(--accent); color: var(--accent-strong);
+}
+.pdf-dl__btn:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
+.pdf-dl__list {
+  position: absolute; right: 0; top: calc(100% + 6px); z-index: 40;
+  margin: 0; padding: 6px; list-style: none;
+  min-width: 300px; max-width: calc(100vw - 32px);
+  background: var(--surface); color: var(--text);
+  border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow);
+}
+.pdf-dl__link {
+  display: flex; align-items: baseline; justify-content: space-between; gap: 12px;
+  padding: 9px 10px; border-radius: 6px; font-size: 14px;
+  color: var(--text); text-decoration: none;
+}
+.pdf-dl__link:hover, .pdf-dl__link:focus-visible { background: var(--surface-2); color: var(--accent-strong); }
+.pdf-dl__link:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: -2px; }
+.pdf-dl__name { white-space: nowrap; }
+.pdf-dl__meta { font-size: 12px; color: var(--text-dim); white-space: nowrap; }
+@media (max-width: 700px) {
+  /* The menu spans the (sticky, hence positioned) top bar under the button,
+     inside the 16px gutters, wherever the button wrapped to. */
+  .pdf-dl { position: static; }
+  .pdf-dl__list { left: 16px; right: 16px; top: calc(100% - 4px); min-width: 0; max-width: none; }
+  /* "PDF" alone on a phone; the full name stays for screen readers. */
+  .pdf-dl__long {
+    position: absolute; width: 1px; height: 1px; overflow: hidden;
+    clip: rect(0 0 0 0); clip-path: inset(50%); white-space: nowrap;
+  }
+}
