@@ -587,6 +587,16 @@ function videoTimeText(t) {
   return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
 }
 
+// tasks/p19 (author feedback: "give the player generous width"): a video card
+// breaks out of the reading column to the reading panel's full width (CSS,
+// from --panel-inner, the panel's inner width kept by syncPanelWidth), and
+// its "Wide" button hides the graph so that the panel -- and with it the
+// player -- takes the whole window; the height stays within one screen.
+const VIDEO_WIDE_BTN_HTML = `<button type="button" class="video-wide-btn" data-video-wide aria-pressed="false" title="Wide player: give the reading panel the whole window (hides the graph; g)">
+        <svg viewBox="0 0 16 16" width="13" height="13" aria-hidden="true"><path d="M1 8h14M1 8l3-3M1 8l3 3M15 8l-3-3M15 8l-3 3" fill="none" stroke="currentColor" stroke-width="1.6"/></svg>
+        <span class="video-wide-btn__label">Wide</span>
+      </button>`;
+
 function videoCardHtml(fig, { kindTag, toyTag, reviewTag, params, altText }) {
   const v = fig.video || { file: '', chapters: [] };
   const base = `animations/${encodeURIComponent(v.file)}`;
@@ -600,7 +610,7 @@ function videoCardHtml(fig, { kindTag, toyTag, reviewTag, params, altText }) {
   const steps = chapters ? `<div class="video-chapters"><div class="video-chapters__label">Steps (select one to jump to it)</div><ol class="video-chapters__list">${chapters}</ol></div>` : '';
   return `
     <figure class="figure-card figure-card--video" id="figure-${escapeHtml(fig.id)}">
-      <div class="figure-card__head">${kindTag}${toyTag}${reviewTag}${FIGURE_ENLARGE_BTN_HTML}</div>
+      <div class="figure-card__head">${kindTag}${toyTag}${reviewTag}${VIDEO_WIDE_BTN_HTML}${FIGURE_ENLARGE_BTN_HTML}</div>
       <div class="figure-mount figure-video-mount">
         <video class="figure-video" controls preload="none" playsinline poster="${base}.poster.jpg" aria-label="${altText}" data-video-duration="${Number(v.duration) || 0}">
           <source src="${base}.mp4" type="video/mp4">
@@ -655,6 +665,8 @@ function videoMarkChapter(video) {
  * handled by delegation on the card, so they keep working after Enlarge
  * moves the mount and caption (the caption carries the chapter list). */
 function mountVideos(root) {
+  syncPanelWidth();
+  syncVideoWide();
   root.querySelectorAll('video.figure-video').forEach((video) => {
     if (video.dataset.wired) return;
     video.dataset.wired = '1';
@@ -663,6 +675,52 @@ function mountVideos(root) {
     // which videoSetSpeed keeps in step.
     video.addEventListener('timeupdate', () => videoMarkChapter(video));
     video.addEventListener('seeked', () => videoMarkChapter(video));
+  });
+}
+
+/** The reading panel's inner width (without its scrollbar) as --panel-inner,
+ * which sizes the video cards (site/app.css). */
+function syncPanelWidth() {
+  const panel = document.getElementById('panel');
+  if (!panel || !(panel.clientWidth > 0)) return;
+  const w = `${panel.clientWidth}px`;
+  if (panel.style.getPropertyValue('--panel-inner') !== w) panel.style.setProperty('--panel-inner', w);
+}
+
+/** "Wide" is pressed exactly while the graph is hidden (by this button, the
+ * toolbar's "Hide graph" or the g key). */
+function syncVideoWide() {
+  const on = document.body.hasAttribute('data-graph-hidden');
+  document.querySelectorAll('[data-video-wide]').forEach((b) => {
+    b.setAttribute('aria-pressed', String(on));
+    b.title = on ? 'Normal width: show the graph again (g)' : 'Wide player: give the reading panel the whole window (hides the graph; g)';
+  });
+}
+
+function initVideoWide() {
+  const panel = document.getElementById('panel');
+  // Deferred to the next frame: setting the width inside the observer's own
+  // callback would re-lay out the panel in the same pass (WebKit reports a
+  // "ResizeObserver loop" error).
+  if (panel && typeof ResizeObserver === 'function') new ResizeObserver(() => requestAnimationFrame(syncPanelWidth)).observe(panel);
+  window.addEventListener('resize', syncPanelWidth);
+  if (typeof MutationObserver === 'function') {
+    new MutationObserver(() => { syncVideoWide(); syncPanelWidth(); })
+      .observe(document.body, { attributes: true, attributeFilter: ['data-graph-hidden'] });
+  }
+  syncPanelWidth();
+  document.addEventListener('click', (e) => {
+    const btn = e.target.closest('[data-video-wide]');
+    if (!btn) return;
+    const toggle = document.querySelector('[data-reading="toggle-graph"]');
+    if (!toggle) return;
+    toggle.click();
+    syncVideoWide();
+    syncPanelWidth();
+    const card = btn.closest('.figure-card');
+    if (card && typeof card.scrollIntoView === 'function') {
+      requestAnimationFrame(() => card.scrollIntoView({ block: 'nearest' }));
+    }
   });
 }
 
@@ -1397,6 +1455,7 @@ async function main() {
   initNotationPopovers(data);
   initFigurePopouts();
   initVideoControls();
+  initVideoWide();
   buildOutline(data);
   initHistoryNav();
   initFigureMenu(data);

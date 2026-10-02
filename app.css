@@ -1003,8 +1003,38 @@ body[data-resizing] .pane { pointer-events: none; }
 .video-chapter__time { flex: 0 0 auto; font-family: var(--font-mono); font-size: 12px; color: var(--text-faint); }
 .video-chapter__title { flex: 1 1 auto; }
 .video-chapter__summary { margin: 2px 0 4px 3.6em; color: var(--text-dim); line-height: 1.45; }
+/* tasks/p19: generous width. A video card leaves the reading column for the
+   reading panel's full width (--panel-inner: the panel's inner width, set by
+   site/app.js), never wider than one screen's height allows for a 16:9
+   player (plus the card's head and speed row) and never wider than 1600px;
+   in the centred layout (graph hidden: "Wide") it is centred on the panel. */
+.figure-card--video {
+  --video-card-w: min(calc(var(--panel-inner, 100%) - 48px), calc((100vh - 175px) * 16 / 9 + 26px), 1600px);
+  width: max(100%, var(--video-card-w)); max-width: none; align-self: flex-start;
+}
+@media (min-width: 701px) {
+  body[data-graph-hidden] .figure-card--video { margin-left: min(0px, calc((100% - var(--video-card-w)) / 2)); }
+}
+.figure-card--video > figcaption { max-width: 82ch; }
+.figure-card--video .video-chapters__list { grid-template-columns: repeat(auto-fill, minmax(min(100%, 340px), 1fr)); }
+.video-wide-btn {
+  margin-left: auto; flex: 0 0 auto; display: inline-flex; align-items: center; gap: 6px;
+  padding: 5px 12px; border: 1px solid var(--accent-strong); border-radius: 999px;
+  background: var(--surface); color: var(--accent-strong); cursor: pointer;
+  font-family: var(--font-ui); font-size: 13px; font-weight: 600; line-height: 1.2;
+}
+.video-wide-btn + .figure-enlarge-btn { margin-left: 0; }
+.video-wide-btn:hover { background: var(--accent-strong); color: var(--surface); }
+.video-wide-btn[aria-pressed="true"] { background: var(--accent-strong); color: var(--surface); }
+.video-wide-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+@media (max-width: 700px) {
+  .video-wide-btn { display: none; }
+  .video-wide-btn + .figure-enlarge-btn { margin-left: auto; }
+}
 /* Enlarged: the whole video on one screen (height bounded by the dialog;
    the speed row sits under it), caption and steps scroll below. */
 .figure-modal__figure .figure-video-mount { align-items: center; }
-.figure-modal__figure .figure-video { width: auto; max-width: 100%; max-height: calc(100vh - 130px); }
+/* tasks/p19: as wide as the dialog allows with the 16:9 player on one screen
+   (an explicit width: "auto" would stop at the poster's intrinsic 1280px). */
+.figure-modal__figure .figure-video { width: min(100%, calc((100vh - 130px) * 16 / 9)); max-width: 100%; max-height: calc(100vh - 130px); }
 .figure-modal__figure .video-speed { align-self: center; }
