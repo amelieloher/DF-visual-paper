@@ -896,3 +896,81 @@ body[data-resizing] .pane { pointer-events: none; }
 .prose .katex-display > .katex > .katex-html::before { content: ""; flex: 1 1 0; }
 .prose .katex-display > .katex > .katex-html > .katex-base { flex: none; }
 .prose .katex-display > .katex > .katex-html > .katex-tag { position: static; flex: 1 1 0; text-align: right; padding-left: 1.25em; }
+
+/* Back's chooser (site/proofback.mjs): when several results use the open one,
+   Back lists them to pick from. */
+.proof-back-chooser {
+  position: fixed; z-index: 120; width: max-content; max-width: min(340px, calc(100vw - 16px));
+  max-height: min(60vh, 420px); overflow-y: auto;
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+  box-shadow: var(--shadow); padding: 8px; font-family: var(--font-ui); font-size: 13px; color: var(--text);
+}
+.proof-back-chooser[hidden] { display: none; }
+.proof-back-chooser__title { margin: 2px 6px 6px; font-size: 12px; color: var(--text-dim); }
+.proof-back-chooser__list { list-style: none; margin: 0; padding: 0; }
+.proof-back-chooser__item {
+  display: block; width: 100%; text-align: left; font: inherit; color: var(--text); background: none;
+  border: 0; border-radius: 6px; padding: 6px 8px; cursor: pointer; line-height: 1.35;
+}
+.proof-back-chooser__item:hover, .proof-back-chooser__item:focus-visible { background: var(--surface-3); outline: none; box-shadow: inset 0 0 0 1.5px var(--focus-ring); }
+.proof-back-chooser__num { font-weight: 600; margin-right: 6px; }
+.proof-back-chooser__name { color: var(--text-dim); }
+
+/* "Show companion links" (tasks/p18): outside the collapsible legend body, so it
+   stays in view when the legend is collapsed, in the companion's own colour. */
+.graph-legend__row--xsrc-toggle {
+  flex-direction: column; align-items: flex-start; gap: 2px; margin-top: 4px; padding: 5px 8px;
+  background: var(--xsrc-tint); border-left: 3px solid var(--xsrc); border-radius: 4px; max-width: 280px;
+}
+.graph-legend__row--xsrc-toggle[hidden] { display: none; }
+.graph-legend__row--xsrc-toggle .graph-legend__toggle { font-weight: 600; }
+.graph-legend__toggle-note { display: block !important; font-size: 11.5px; line-height: 1.35; color: var(--text-dim); }
+/* Figures menu (site/figuremenu.mjs; the button and panel reuse the "Download
+   PDF" menu's .pdf-dl styles in site/downloads.css) and the figure marker. */
+.fig-menu[hidden] { display: none; }
+.fig-menu__panel { width: 400px; max-height: min(70vh, 640px); overflow-y: auto; padding: 8px; }
+.fig-menu__intro { margin: 2px 6px 6px; font-size: 12.5px; color: var(--text-dim); }
+.fig-menu__list { margin: 0; padding: 0; list-style: none; }
+.fig-menu__link {
+  display: flex; align-items: center; gap: 10px; padding: 7px 8px; border-radius: 6px;
+  color: var(--text); text-decoration: none; font-size: 14px; line-height: 1.3;
+}
+.fig-menu__link:hover, .fig-menu__link:focus-visible { background: var(--surface-2); }
+.fig-menu__link:hover .fig-menu__title, .fig-menu__link:focus-visible .fig-menu__title { color: var(--accent-strong); }
+.fig-menu__link:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: -2px; }
+.fig-menu__thumb {
+  flex: none; width: 64px; height: 44px; border-radius: 4px; overflow: hidden;
+  border: 1px solid var(--border); background: var(--surface);
+  display: flex; align-items: center; justify-content: center;
+}
+.fig-menu__img { width: 100%; height: 100%; object-fit: contain; }
+.fig-menu__img--dark { display: none; }
+:root[data-theme="dark"] .fig-menu__img--light { display: none; }
+:root[data-theme="dark"] .fig-menu__img--dark { display: block; }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .fig-menu__img--light { display: none; }
+  :root:not([data-theme="light"]) .fig-menu__img--dark { display: block; }
+}
+.fig-menu__thumb--none { font-size: 10px; color: var(--text-dim); }
+.outline__fig { margin-left: 6px; font-size: 11px; color: var(--text-dim); white-space: nowrap; }
+.fig-menu__text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.fig-menu__title { font-weight: 500; }
+.fig-menu__where { font-size: 12.5px; color: var(--text-dim); }
+.fig-menu__also { white-space: nowrap; }
+/* On a section page the same entries are plain links, like "Contains". */
+.fig-section-list .fig-menu__link { padding: 6px 8px; }
+.legend-figure { font-style: normal; color: var(--text); margin-right: 5px; }
+.graph-legend__row[hidden] { display: none; }
+/* The card a Figures-menu choice scrolled to, briefly outlined. */
+.figure-card { scroll-margin-top: 12px; }
+.figure-card--flash { animation: figure-flash 2.4s ease-out; }
+@keyframes figure-flash {
+  0%, 55% { box-shadow: 0 0 0 3px var(--focus-ring); border-color: var(--focus-ring); }
+  100% { box-shadow: 0 0 0 3px transparent; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .figure-card--flash { animation: none; box-shadow: 0 0 0 3px var(--focus-ring); }
+}
+@media (max-width: 700px) {
+  .fig-menu__panel { width: auto; max-height: 70dvh; }
+}

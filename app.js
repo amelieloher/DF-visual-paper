@@ -5,8 +5,12 @@
 // panel, search, theme, deep links and dev view.
 
 import { notationKeyFromClassName, getNotationEntry, renderNotationCard } from './notation.mjs';
-import { createGraphController } from './graphnav.mjs';
+import { createGraphController, figureCountsByNode, figureMarkText } from './graphnav.mjs';
 import { initReadingMode } from './readingmode.mjs';
+import { initProofBack } from './proofback.mjs';
+import {
+  figureMenuEntries, figuresInside, figureMenuListHtml, figureLinkHtml, setPlainText,
+} from './figuremenu.mjs';
 
 // vendor/cytoscape-dagre.min.js is loaded as a classic <script> tag before
 // this module and attaches a plain global; cytoscape only gains the `dagre`
@@ -216,7 +220,7 @@ function howToReadGraphHtml(meta) {
       <p>The map shows sections and results as boxes joined by arrows; clicking a result switches to a columns view instead, with what it uses in the left columns and what uses it in the right ones.</p>
       <p>Click a section to open it and see what is inside; click it again to close it.</p>
       <p>Click a result to read it in this panel: its statement, what it uses, what uses it, and, where the paper gives one, its proof.</p>
-      <p>Back and Forward step through the graph views already opened, like a browser's own.</p>
+      <p>Back goes up the proof: from the result you are reading to the result whose proof uses it (when several do, it asks which). Forward retraces those steps back down. Changing the view (zooming, Whole map, Main results or Full graph) is not a step; the browser&rsquo;s own back button still retraces every page you opened.</p>
     </div>`;
 }
 
@@ -250,7 +254,7 @@ function welcomePanelHtml(data) {
   const background = ext && hasBackground ? ` The only mathematics that appears in neither the paper nor the companion manuscript is in nodes marked <em>Background</em>, which state facts the paper takes from the companion manuscript.` : '';
   const figs = Object.values((data && data.figures) || {});
   const figPara = figs.length ? `
-        <p>Some results carry a figure, drawn for this site to illustrate an argument of the paper; its title and each statement of what it shows were checked in the same way.${figs.some((f) => f && f.status && f.status !== 'approved') ? ' A figure marked “awaiting author review” has passed that check but has not yet been approved by the authors.' : ''} ${figs.some((f) => f && f.illustrationLabel) ? ' A figure marked “numerical illustration” or “illustrative path” draws example data, not a proved bound.' : ''} Under each figure, “Full explanation” gives its complete caption; “Enlarge” opens it at full width.</p>` : '';
+        <p>Some results carry a figure, drawn for this site to illustrate an argument of the paper; its title and each statement of what it shows were checked in the same way.${figs.some((f) => f && f.status && f.status !== 'approved') ? ' A figure marked “awaiting author review” has passed that check but has not yet been approved by the authors.' : ''} ${figs.some((f) => f && f.illustrationLabel) ? ' A figure marked “numerical illustration” or “illustrative path” draws example data, not a proved bound.' : ''} Under each figure, “Full explanation” gives its complete caption; “Enlarge” opens it at full width. Every figure is listed under “Figures” in the top bar, and the boxes that carry one are marked &#x25A3; on the map.</p>` : '';
   const pdfPara = typeof document !== 'undefined' && document.querySelector('[data-pdf-downloads]') ? `
         <p>“Download PDF” at the top gives the paper${ext ? ' and the companion manuscript' : ''} as PDF files, in the versions this site is built from.</p>` : '';
   return `
@@ -757,10 +761,22 @@ function renderStructuralNode(node) {
     ${summary}
     ${idea}
     ${figuresSectionHtml(node, data)}
+    ${sectionFigureLinksHtml(node, data)}
     ${usesList('Proved here', node.provedHere, data)}
     ${usesList('Setting stated here', node.settingHere, data)}
     <div class="section-label">Contains</div>
     <nav class="uses-list">${rows || '<p class="prose">No children shown at this zoom level yet.</p>'}</nav>`;
+}
+
+/** A section/subsection page's list of the figures inside it (beyond the
+ * ones attached to the section itself, shown as cards above): one link
+ * each, to the box it is attached to (site/figuremenu.mjs). */
+function sectionFigureLinksHtml(node, data) {
+  const own = Array.isArray(node.figures) ? node.figures : [];
+  const list = figuresInside(data, node.id, own);
+  if (!list.length) return '';
+  const head = own.length ? 'More figures in this section' : 'Figures in this section';
+  return `<div class="section-label">${head}</div><nav class="uses-list fig-section-list" aria-label="${head}">${list.map((e) => figureLinkHtml(e, { thumbs: false, richTitle: false })).join('')}</nav>`;
 }
 
 function renderExternalNode(node) {
@@ -1148,60 +1164,102 @@ function initNotationPopovers(data) {
 }
 
 // ---------------------------------------------------------------------------
-// History navigation (a reader asked for "a button to go back a step...
-// given how complicated a network it is"): visible Back/Forward buttons
-// that simply call history.back()/history.forward(), so they can never
-// disagree with the browser's own. An in-app position counter travels in
-// history.state as {mainIndex: n}: n=0 on the entry this page loaded with
-// (or whatever a same-session reload already carried), and the next n on
-// every entry after -- however it was created (navigate(), the brand
-// button, navigateWholeMap(), or an ordinary <a href="#/..."> in the panel
-// -- every one of them ends in a 'hashchange', the one place this is
-// tagged, via syncHistoryIndex). historyIndex/maxHistoryIndex are pure
-// bookkeeping: Back is disabled at n <= 0 (the site's own first entry --
-// this never navigates the reader off the site, whatever real history sits
-// behind it) and Forward at the highest n reached so far; a brand-new entry
-// always resets the ceiling to its own index, exactly as the browser itself
-// discards any old forward branch the moment a fresh entry is pushed from
-// the middle of history.
+// Back / Forward (site/proofback.mjs): "Up the proof chain" -- the site's own
+// Back goes up to the result whose proof uses the open statement (a chooser
+// when several do), Forward retraces the last Back steps. Changes of view
+// that keep the same statement open are not steps. The browser's own
+// back/forward still walk the hash history, untouched.
 // ---------------------------------------------------------------------------
-let historyIndex = 0;
-let maxHistoryIndex = 0;
-
-function updateHistoryNavButtons() {
-  const backDisabled = historyIndex <= 0;
-  const forwardDisabled = historyIndex >= maxHistoryIndex;
-  document.querySelectorAll('[data-history-nav="back"]').forEach((b) => { b.disabled = backDisabled; });
-  document.querySelectorAll('[data-history-nav="forward"]').forEach((b) => { b.disabled = forwardDisabled; });
-}
-
-/** Run on every hashchange after boot: an entry that already carries a
- * numeric mainIndex is one this app tagged before (a Back/Forward step of
- * ours or the browser's own, or a same-entry replay); one that does not is
- * brand new and gets the next index, tagged in place with replaceState
- * (never a history entry of its own, and never fires hashchange/popstate). */
-function syncHistoryIndex() {
-  const cur = history.state;
-  if (cur && typeof cur.mainIndex === 'number') {
-    historyIndex = cur.mainIndex;
-    maxHistoryIndex = Math.max(maxHistoryIndex, historyIndex);
-  } else {
-    historyIndex += 1;
-    history.replaceState({ mainIndex: historyIndex }, '', location.href);
-    maxHistoryIndex = historyIndex;
-  }
-  updateHistoryNavButtons();
-}
+let proofBack = null;
 
 function initHistoryNav() {
-  const cur = history.state;
-  const tagged = cur && typeof cur.mainIndex === 'number';
-  historyIndex = tagged ? cur.mainIndex : 0;
-  if (!tagged) history.replaceState({ mainIndex: historyIndex }, '', location.href);
-  maxHistoryIndex = historyIndex;
-  updateHistoryNavButtons();
-  document.querySelectorAll('[data-history-nav="back"]').forEach((b) => b.addEventListener('click', () => history.back()));
-  document.querySelectorAll('[data-history-nav="forward"]').forEach((b) => b.addEventListener('click', () => history.forward()));
+  try {
+    proofBack = initProofBack({
+      getData: () => state.data,
+      navigate: (id) => { navigate(id, 'L3'); },
+      nameOf: (id) => { const t = graphLabelOf(id); return t.number || t.title || id; },
+      titleOf: (id) => graphLabelOf(id).title,
+    });
+  } catch (err) {
+    console.warn(`Back/Forward unavailable: ${err && err.message}`);
+  }
+}
+
+/** The statement a route keeps open in the reading panel (null: welcome). */
+function syncHistoryNav(route) {
+  if (proofBack) proofBack.onRoute(route && route.id ? route.id : null);
+}
+
+// ---------------------------------------------------------------------------
+// Figures menu (site/figuremenu.mjs): the top bar's "Figures" lists every
+// figure with where it is; choosing one (there, or on a section page) opens
+// the box it is attached to -- the graph follows as for any navigation --
+// then scrolls the reading panel to that figure's card and flashes it.
+// ---------------------------------------------------------------------------
+const FIGURE_FLASH_MS = 2400;
+
+/** Scroll the panel to `#figure-<id>` and flash it; retried for a few
+ * frames, since the panel renders on the route change. */
+function revealFigureCard(figId, tries = 30) {
+  const card = document.getElementById(`figure-${figId}`);
+  if (!card || !document.getElementById('panel-content').contains(card)) {
+    if (tries > 0) requestAnimationFrame(() => revealFigureCard(figId, tries - 1));
+    return;
+  }
+  const smooth = !(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+  card.scrollIntoView({ block: 'start', behavior: smooth ? 'smooth' : 'auto' });
+  card.classList.remove('figure-card--flash');
+  void card.offsetWidth; // restart the animation on a repeat choice
+  card.classList.add('figure-card--flash');
+  setTimeout(() => card.classList.remove('figure-card--flash'), FIGURE_FLASH_MS);
+}
+
+function jumpToFigure(figId, targetId) {
+  const target = `#/${encodeURIComponent(targetId)}/L3`;
+  if (location.hash !== target) {
+    window.addEventListener('hashchange', () => revealFigureCard(figId), { once: true });
+  }
+  navigate(targetId, 'L3');
+  showPanelTab();
+  if (location.hash === target) revealFigureCard(figId);
+}
+
+function initFigureMenu(data) {
+  setPlainText(plainText);
+  const menu = document.querySelector('[data-figure-menu]');
+  const entries = figureMenuEntries(data);
+  // The phone outline (the map below 700px) carries the same marker.
+  const counts = figureCountsByNode(data);
+  document.querySelectorAll('#outline button[data-id]').forEach((btn) => {
+    const figs = counts.get(btn.dataset.id);
+    if (figs && figs.size) btn.insertAdjacentHTML('beforeend', `<span class="outline__fig">${escapeHtml(figureMarkText(figs.size))}</span>`);
+  });
+  const legendRow = document.querySelector('[data-legend-figures]');
+  if (legendRow) legendRow.hidden = entries.length === 0;
+  if (menu) {
+    menu.querySelector('.fig-menu__list').innerHTML = figureMenuListHtml(entries);
+    menu.hidden = entries.length === 0;
+    const summary = menu.querySelector('summary');
+    menu.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && menu.open) {
+        menu.open = false;
+        if (summary) summary.focus();
+        e.stopPropagation();
+      }
+    });
+    document.addEventListener('click', (e) => {
+      if (menu.open && !menu.contains(e.target)) menu.open = false;
+    });
+  }
+  // One delegated handler for the menu and the section pages' lists. A
+  // modified click (new tab) keeps the plain link behaviour.
+  document.addEventListener('click', (e) => {
+    const a = e.target.closest && e.target.closest('a[data-figure-jump]');
+    if (!a || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+    e.preventDefault();
+    if (menu) menu.open = false;
+    jumpToFigure(a.dataset.figureJump, a.dataset.figureTarget);
+  });
 }
 
 // ---------------------------------------------------------------------------
@@ -1213,7 +1271,6 @@ async function main() {
   initReading();
   initBrandHome();
   initGraphHelp();
-  initHistoryNav();
   if (state.devMode) document.getElementById('dev-indicator').hidden = false;
 
   const res = await fetch('data.json');
@@ -1226,9 +1283,13 @@ async function main() {
   initNotationPopovers(data);
   initFigurePopouts();
   buildOutline(data);
+  initHistoryNav();
+  initFigureMenu(data);
 
-  window.addEventListener('hashchange', () => { syncHistoryIndex(); applyRoute(parseHash()); });
-  applyRoute(parseHash());
+  window.addEventListener('hashchange', () => { const r = parseHash(); applyRoute(r); syncHistoryNav(r); });
+  const first = parseHash();
+  applyRoute(first);
+  syncHistoryNav(first);
 }
 
 // ---------------------------------------------------------------------------

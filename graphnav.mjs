@@ -115,7 +115,7 @@ export function buildGraphIndex(data) {
     if (!nodes.has(e.from) || !nodes.has(e.to) || e.from === e.to) continue;
     const key = `${e.from}\u0000${e.to}`;
     const prev = byPair.get(key);
-    if (!prev) byPair.set(key, { from: e.from, to: e.to, kind: e.kind, mapVia: e.mapVia || null });
+    if (!prev) byPair.set(key, { from: e.from, to: e.to, kind: e.kind, mapVia: e.mapVia || null, proofOf: e.proofOf || null, proofHome: !!e.proofHome });
     else if ((EDGE_KIND_RANK[e.kind] ?? 0) > (EDGE_KIND_RANK[prev.kind] ?? 0)) prev.kind = e.kind;
   }
   const edges = [...byPair.values()];
@@ -190,9 +190,20 @@ export function isOpenableCluster(index, id) {
  * cluster and in a result's focus.
  */
 export function overviewGraph(index, expanded, {
-  showXsrc = false, refs = true, mergeMutual = false, bibLeaves = true,
+  showXsrc = false, refs = true, mergeMutual = false, bibLeaves = true, xsrcItems = false,
 } = {}) {
   const open = (id) => index.clusters.has(id) && expanded.has(id);
+  /** `xsrcItems` (with `showXsrc`, for an opened cluster's context): a companion
+   * result or section box whose region is closed stands for itself, as a
+   * top-level node, instead of being lifted into the closed region's box -- so an
+   * opened section shows exactly which companion results it uses. */
+  const loose = (id) => {
+    if (!xsrcItems || !showXsrc) return false;
+    const n = index.nodes.get(id);
+    if (!n.xsrc || n.kind === 'external') return false;
+    const chain = ancestorsOf(index, id);
+    return chain.length > 0 && !open(chain[0]);
+  };
   const dropped = (id) => {
     if (bibLeaves) return false;
     const n = index.nodes.get(id);
@@ -200,10 +211,11 @@ export function overviewGraph(index, expanded, {
     if (n.kind === 'external' && !n.xsrc && !index.clusters.has(id)) return true;
     return !showXsrc && n.xsrc;
   };
-  const visible = (id) => !dropped(id) && ancestorsOf(index, id).every((a) => open(a) && !dropped(a));
+  const visible = (id) => loose(id) || (!dropped(id) && ancestorsOf(index, id).every((a) => open(a) && !dropped(a)));
   /** Nearest visible stand-in for `id`: its outermost closed ancestor, or
    * itself (an open cluster stands for itself, as its box). */
   const rep = (id) => {
+    if (loose(id)) return id;
     for (const a of ancestorsOf(index, id)) {
       if (!open(a)) return a;
     }
@@ -215,7 +227,7 @@ export function overviewGraph(index, expanded, {
     const isOpen = open(n.id);
     nodes.push({
       id: n.id,
-      parent: n.parent || null,
+      parent: loose(n.id) ? null : (n.parent || null),
       cluster: index.clusters.has(n.id),
       expanded: isOpen,
     });
@@ -231,7 +243,7 @@ export function overviewGraph(index, expanded, {
     const a = rep(e.from);
     const b = rep(e.to);
     if (dropped(a) || dropped(b)) continue;
-    if (a === b || ancestorsOf(index, a).includes(b) || ancestorsOf(index, b).includes(a)) continue;
+    if (a === b || (!loose(a) && ancestorsOf(index, a).includes(b)) || (!loose(b) && ancestorsOf(index, b).includes(a))) continue;
     if (e.kind === 'ref' && (!refs || a !== e.from || b !== e.to || open(a) || open(b))) continue;
     // a uses b: drawn b -> a
     const key = `${b}\u0000${a}`;
@@ -280,7 +292,7 @@ export function clusterView(index, subject, expanded, opts = {}) {
   const open = new Set(expanded);
   for (const a of ancestorsOf(index, subject)) open.add(a);
   open.add(subject);
-  const g = overviewGraph(index, open, opts);
+  const g = overviewGraph(index, open, { xsrcItems: true, ...opts });
   const inside = (id) => id === subject || ancestorsOf(index, id).includes(subject);
   const edges = g.edges.filter((e) => inside(e.source) || inside(e.target));
   const linked = new Set();
@@ -345,12 +357,73 @@ export function bandOf(index, id) {
 }
 
 /**
- * The essentials whole map: the major results, each inside its section band
- * (bandOf), joined by the build's reduced proof skeleton. Returns
- *   nodes: [{id, parent, band}]  -- bands first, in paper order
- *   edges: [{source, target, kind: 'skeleton', via}]  -- as drawn: used -> user
+ * Where the companion manuscript enters the major results' proofs: every
+ * external-source node (a quoted companion result or a companion section box,
+ * never the region itself) that a major result uses directly or through a chain
+ * of hidden (non-major) results of the paper -- the same rule as the proof
+ * skeleton (scripts/lib/tiers.mjs): curated `uses` edges, leaving out the
+ * `mapVia` duplicates and proof-home links, a proof box's `proofOf` edges
+ * counting as its result's own, never passing through another major result or
+ * through the companion itself. Returns
+ *   {regions: [ids], items: [{id, region}], edges: [{source, target, via}]}
+ * (`region`: the item's outermost box; edges as drawn, used -> user, with `via`
+ * the hidden results on one shortest chain, empty for a direct use); items in
+ * the companion's own order.
  */
-export function essentialsMap(index) {
+export function essentialsXsrc(index) {
+  const isResult = (id) => {
+    const n = index.nodes.get(id);
+    return !!n && !n.xsrc && !!n.tier;
+  };
+  const adj = new Map();
+  for (const e of index.edges) {
+    if (e.kind !== 'uses' || e.mapVia || e.proofHome) continue;
+    const from = e.proofOf || e.from;
+    if (from === e.to || !isResult(from)) continue;
+    const to = index.nodes.get(e.to);
+    if (!to || (!isResult(e.to) && !(to.xsrc && to.kind !== 'external'))) continue;
+    if (!adj.has(from)) adj.set(from, []);
+    if (!adj.get(from).includes(e.to)) adj.get(from).push(e.to);
+  }
+  const found = new Map(); // item -> region
+  const edges = [];
+  for (const y of index.nodes.keys()) {
+    if (index.nodes.get(y).tier !== 'major') continue;
+    const prev = new Map([[y, null]]);
+    const queue = [y];
+    while (queue.length) {
+      const u = queue.shift();
+      for (const v of adj.get(u) || []) {
+        if (prev.has(v)) continue;
+        prev.set(v, u);
+        const n = index.nodes.get(v);
+        if (n.xsrc) {
+          const region = ancestorsOf(index, v)[0];
+          if (!region) continue;
+          found.set(v, region);
+          const via = [];
+          for (let p = u; p !== y; p = prev.get(p)) via.unshift(p);
+          edges.push({ source: v, target: y, via });
+        } else if (n.tier !== 'major') queue.push(v);
+      }
+    }
+  }
+  const items = [...index.nodes.keys()].filter((id) => found.has(id)).map((id) => ({ id, region: found.get(id) }));
+  const regions = [...new Set(items.map((it) => it.region))];
+  return { regions, items, edges };
+}
+
+/**
+ * The essentials whole map: the major results, each inside its section band
+ * (bandOf), joined by the build's reduced proof skeleton. With `showXsrc`, the
+ * companion results the major results use, directly or through hidden steps
+ * (essentialsXsrc), are added
+ * in a band of their own -- the companion manuscript's region, `xsrc: true` --
+ * with their arrows into those results. Returns
+ *   nodes: [{id, parent, band, xsrc?}]  -- bands first, in paper order
+ *   edges: [{source, target, kind: 'skeleton', via, xsrc?}]  -- as drawn: used -> user
+ */
+export function essentialsMap(index, { showXsrc = false } = {}) {
   const major = [...index.nodes.values()].filter((n) => n.tier === 'major').map((n) => n.id);
   const bands = new Set();
   const items = major.map((id) => {
@@ -365,7 +438,19 @@ export function essentialsMap(index) {
     .map((s) => ({
       source: s.from, target: s.to, kind: 'skeleton', via: s.via || [],
     }));
-  return { nodes: [...bandNodes, ...items], edges };
+  if (!showXsrc) return { nodes: [...bandNodes, ...items], edges };
+  const x = essentialsXsrc(index);
+  return {
+    nodes: [
+      ...bandNodes,
+      ...x.regions.map((id) => ({ id, parent: null, band: true, xsrc: true })),
+      ...items,
+      ...x.items.map((it) => ({ id: it.id, parent: it.region, band: false, xsrc: true })),
+    ],
+    edges: [...edges, ...x.edges.map((e) => ({
+      source: e.source, target: e.target, kind: 'skeleton', via: e.via, xsrc: true,
+    }))],
+  };
 }
 
 /**
@@ -378,14 +463,21 @@ export function essentialsMap(index) {
  * to keep the arrows between bands short. `sizeOf(id)` -> {w, h}. Returns Map id ->
  * {x, y} for the results (a band's box follows from its results).
  */
-export function essentialsLayout(graph, sizeOf, { colGap = 20, rowGap = 46, stackGap = 12 } = {}) {
+export function essentialsLayout(graph, sizeOf, {
+  colGap = 20, rowGap = 46, stackGap = 12, xsrcPerLine = 4,
+} = {}) {
   const items = graph.nodes.filter((n) => !n.band);
   const order = new Map(graph.nodes.map((n, i) => [n.id, i]));
+  // Companion results (essentialsMap with showXsrc) never move the paper's own
+  // rows: depths come from the skeleton alone, and the companion band is a row
+  // of its own just above the first row it points into, slid towards its targets.
+  const isX = new Set(graph.nodes.filter((n) => n.xsrc && !n.band).map((n) => n.id));
   // Longest path from a source along the (acyclic) skeleton.
   const depth = new Map(items.map((n) => [n.id, 0]));
   for (let pass = 0; pass < items.length; pass++) {
     let changed = false;
     for (const e of graph.edges) {
+      if (isX.has(e.source)) continue;
       if (!depth.has(e.source) || !depth.has(e.target)) continue;
       const d = depth.get(e.source) + 1;
       if (d > depth.get(e.target)) { depth.set(e.target, d); changed = true; }
@@ -399,11 +491,39 @@ export function essentialsLayout(graph, sizeOf, { colGap = 20, rowGap = 46, stac
     rows.get(key).push(n.id);
   }
   const byDepthThenPaper = (a, b) => (depth.get(a) - depth.get(b)) || (order.get(a) - order.get(b));
-  const list = [...rows.entries()].map(([key, ids]) => ({ key, ids: ids.sort(byDepthThenPaper) }));
+  const all = [...rows.entries()].map(([key, ids]) => ({ key, ids: ids.sort(byDepthThenPaper), xsrc: ids.every((id) => isX.has(id)) }));
+  const list = all.filter((r) => !r.xsrc);
   list.sort((a, b) => (depth.get(a.ids[0]) - depth.get(b.ids[0])) || (order.get(a.key) - order.get(b.key)));
-  // Each row: columns of equal depth.
+  const targetsOf = (row) => new Set(graph.edges.filter((e) => row.ids.includes(e.source)).map((e) => e.target));
+  for (const xr of all.filter((r) => r.xsrc)) {
+    const ts = targetsOf(xr);
+    const at = list.findIndex((r) => r.ids.some((id) => ts.has(id)));
+    list.splice(at < 0 ? 0 : at, 0, xr);
+  }
+  // Each row: columns of equal depth (a companion row: one column per result).
   for (const row of list) {
     row.cols = [];
+    if (row.xsrc) {
+      // Wrapped into lines of at most `xsrcPerLine`, read left to right then down:
+      // column j holds the j-th result of each line.
+      const lines = Math.ceil(row.ids.length / xsrcPerLine);
+      const perLine = Math.ceil(row.ids.length / lines);
+      row.cols = [];
+      for (let j = 0; j < perLine; j++) {
+        const ids = [];
+        for (let k = 0; k < lines; k++) if (row.ids[k * perLine + j]) ids.push(row.ids[k * perLine + j]);
+        row.cols.push({ ids });
+      }
+      for (const col of row.cols) {
+        const sizes = col.ids.map((id) => sizeOf(id));
+        col.sizes = sizes;
+        col.w = Math.max(...sizes.map((z) => z.w));
+        col.h = sizes.reduce((sum, z) => sum + z.h, 0) + stackGap * (sizes.length - 1);
+      }
+      row.w = row.cols.reduce((sum, c) => sum + c.w, 0) + colGap * (row.cols.length - 1);
+      row.h = Math.max(...row.cols.map((c) => c.h));
+      continue;
+    }
     for (const id of row.ids) {
       const last = row.cols[row.cols.length - 1];
       if (last && depth.get(last.ids[0]) === depth.get(id)) last.ids.push(id);
@@ -439,12 +559,28 @@ export function essentialsLayout(graph, sizeOf, { colGap = 20, rowGap = 46, stac
     }
     const pulls = [];
     for (const id of row.ids) {
-      for (const src of into.get(id) || []) if (pos.has(src)) pulls.push(pos.get(src).x - local.get(id).x);
+      for (const src of into.get(id) || []) if (pos.has(src) && !isX.has(src)) pulls.push(pos.get(src).x - local.get(id).x);
     }
     const room = (widest - row.w) / 2;
     const shift = pulls.length ? Math.max(-room, Math.min(room, pulls.reduce((a, b) => a + b, 0) / pulls.length)) : 0;
     for (const [id, p] of local) pos.set(id, { x: p.x + shift, y: p.y });
+    row.local = local;
     top += row.h + rowGap;
+  }
+  // A companion row, now that its targets are placed: centred over them (as far
+  // as the widest row allows).
+  for (const row of list.filter((r) => r.xsrc)) {
+    const ts = [...targetsOf(row)].filter((id) => pos.has(id));
+    if (!ts.length) continue;
+    const want = ts.reduce((sum, id) => sum + pos.get(id).x, 0) / ts.length;
+    const xs = row.ids.map((id) => row.local.get(id).x);
+    const mid = (Math.min(...xs) + Math.max(...xs)) / 2;
+    const room = Math.max(0, (widest - row.w) / 2);
+    const shift = Math.max(-room - mid, Math.min(room - mid, want - mid));
+    for (const id of row.ids) {
+      const p = row.local.get(id);
+      pos.set(id, { x: p.x + shift, y: p.y });
+    }
   }
   return pos;
 }
@@ -493,11 +629,15 @@ export function essentialsIndex(data) {
  * among them, exactly as clusterView draws them, without the outside context --
  * the closed boxes and results elsewhere that its contents link to, whose many
  * long thin arrows would bury the section's own. (A result's focus still shows
- * everything it uses and everything using it.) Same shape as clusterView.
+ * everything it uses and everything using it.) The one exception is the
+ * companion manuscript's results, kept as context while "Show companion links"
+ * is on (`opts.showXsrc`). Same shape as clusterView.
  */
 export function essentialsClusterView(index, subject, expanded, opts = {}) {
   const g = clusterView(index, subject, expanded, opts);
-  const nodes = g.nodes.filter((n) => !n.context);
+  // With "Show companion links" on, the companion results the section uses (or
+  // that use it) stay, as context: the toggle works here as everywhere else.
+  const nodes = g.nodes.filter((n) => !n.context || (opts.showXsrc && index.nodes.get(n.id).xsrc));
   const shown = new Set(nodes.map((n) => n.id));
   return { nodes, edges: g.edges.filter((e) => shown.has(e.source) && shown.has(e.target)) };
 }
@@ -862,6 +1002,15 @@ function writeViewPreference(v) {
   try { localStorage.setItem(VIEW_STORAGE_KEY, v); } catch { /* not remembered */ }
 }
 
+/** "Show companion links", remembered the same way (default off). */
+const XSRC_STORAGE_KEY = 'vp-show-xsrc';
+function readShowXsrc() {
+  try { return localStorage.getItem(XSRC_STORAGE_KEY) === '1'; } catch { return false; }
+}
+function writeShowXsrc(v) {
+  try { localStorage.setItem(XSRC_STORAGE_KEY, v ? '1' : '0'); } catch { /* not remembered */ }
+}
+
 /** Whether the reader collapsed the graph legend, remembered the same way. */
 const LEGEND_STORAGE_KEY = 'vp-legend-collapsed';
 function readLegendCollapsed() {
@@ -887,9 +1036,59 @@ export function nodeLabel({ number, title }, { maxTitle = 30, childCount = 0, co
   if (title && title !== number) lines.push(truncate(title, maxTitle));
   if (!lines.length) lines.push('?');
   if (collapsedCluster && childCount) {
-    lines.push(xsrcCluster ? `${childCount} cited items  +` : `${childCount} ${childCount === 1 ? 'part' : 'parts'}  +`);
+    // The companion region counts its results (not its section boxes).
+    lines.push(xsrcCluster ? `${childCount} ${childCount === 1 ? 'result' : 'results'}  +` : `${childCount} ${childCount === 1 ? 'part' : 'parts'}  +`);
   }
   return lines.join('\n');
+}
+
+/** Figures on the map (tasks/p18 builder E): node id -> the distinct figure
+ * ids attached to it or to anything inside it (its paper descendants), from
+ * each figure's `attachTo`. A figure attached to two results in one section
+ * counts once for that section. */
+export function figureCountsByNode(data) {
+  const all = { ...((data && data.nodes) || {}), ...((data && data.externalNodes) || {}) };
+  const out = new Map();
+  for (const f of Object.values((data && data.figures) || {})) {
+    if (!f || !f.id) continue;
+    const targets = Array.isArray(f.attachTo) ? f.attachTo : (f.attachTo ? [f.attachTo] : []);
+    for (const t of targets) {
+      const seen = new Set();
+      for (let id = t; id && all[id] && !seen.has(id); id = all[id].parent) {
+        seen.add(id);
+        if (!out.has(id)) out.set(id, new Set());
+        out.get(id).add(f.id);
+      }
+    }
+  }
+  return out;
+}
+
+/** The figure marker a box's label carries: the glyph the legend explains,
+ * then how many figures the box holds. */
+export const FIGURE_MARK = '\u25A3';
+export function figureMarkText(count) {
+  return `${FIGURE_MARK} ${count} ${count === 1 ? 'figure' : 'figures'}`;
+}
+
+/** Adds the figure marker to built cytoscape elements in place: a line
+ * under the label (inline for an opened cluster, whose label is one line),
+ * and class `has-figure` on a box that carries a figure itself. */
+export function markFigureElements(els, data, counts = figureCountsByNode(data)) {
+  const all = { ...((data && data.nodes) || {}), ...((data && data.externalNodes) || {}) };
+  for (const el of els) {
+    if (el.group !== 'nodes' || !el.data) continue;
+    const cls = ` ${el.classes || ''} `;
+    if (cls.includes(' header ') || cls.includes(' band ')) continue;
+    const id = el.data.opens || el.data.id;
+    const figs = counts.get(id);
+    if (!figs || !figs.size || !el.data.label) continue;
+    const inline = cls.includes(' expanded ');
+    el.data.label = `${el.data.label}${inline ? '  \u00B7  ' : '\n'}${figureMarkText(figs.size)}`;
+    const own = all[id] && Array.isArray(all[id].figures) && all[id].figures.length;
+    if (own && !el.data.opens) el.classes = `${el.classes || ''} has-figure`.trim();
+  }
+  return els;
 }
 
 function nodeClasses(n) {
@@ -979,6 +1178,11 @@ function buildStylesheet(cssVar, fontGen = 0) {
       color: cssVar('--text-dim'), 'font-size': 11, 'font-weight': 400,
     } },
     { selector: 'node.ess-background:childless', style: { width: 138, 'text-max-width': '122px', padding: '5px' } },
+    // A small grey box (a setting or a definition) that carries a figure
+    // (markFigureElements) reads in the main text colour at the ordinary size,
+    // so the figure it holds can be found on the map; it stays a grey box.
+    { selector: 'node.has-figure.ess-background', style: { color: cssVar('--text'), 'border-color': cssVar('--text-faint'), 'border-width': 1.5, 'font-size': 12 } },
+    { selector: 'node.has-figure.ess-background:childless', style: { width: 156, 'text-max-width': '142px', padding: '7px' } },
     // The external-source layer's own colours (external input italic-dotted; a quoted external-source
     // item or a Background node, tinted) come after ess-background, so a citation or
     // a Background node keeps its own colour even where it is also sized/dimmed as
@@ -987,6 +1191,23 @@ function buildStylesheet(cssVar, fontGen = 0) {
     { selector: 'node.lvl-ext', style: { 'border-style': 'dotted', 'border-width': 2, 'border-color': cssVar('--text-faint'), 'background-color': cssVar('--surface'), 'font-style': 'italic' } },
     { selector: 'node.cluster-xsrc', style: { 'background-color': cssVar('--xsrc-tint'), 'border-color': cssVar('--xsrc'), 'border-style': 'dotted' } },
     { selector: 'node.kind-xsrc', style: { 'background-color': cssVar('--xsrc-tint'), 'border-color': cssVar('--xsrc'), 'border-style': 'dotted', 'font-style': 'normal' } },
+    // The companion manuscript's region (tasks/p18): as prominent as a section box,
+    // in the companion's own colour -- closed on the Full graph map, open as a
+    // container, and as a band of the Main results map.
+    { selector: 'node.xsrc-region', style: {
+      'background-color': cssVar('--xsrc-tint'), 'border-color': cssVar('--xsrc'), 'border-style': 'solid', 'border-width': 2.5,
+      color: cssVar('--text'), 'font-size': 15, 'font-weight': 600, 'font-style': 'normal',
+    } },
+    { selector: 'node.xsrc-region:childless', style: { width: 188, 'text-max-width': '172px' } },
+    { selector: 'node.xsrc-region:parent', style: { 'background-opacity': 0.55, 'border-width': 2, color: cssVar('--xsrc') } },
+    { selector: 'node.band.band-xsrc', style: {
+      'background-color': cssVar('--xsrc-tint'), 'background-opacity': 0.7, 'border-color': cssVar('--xsrc'), 'border-width': 1.5, 'border-style': 'solid',
+    } },
+    { selector: 'node.band-label.band-label-xsrc', style: { color: cssVar('--xsrc'), 'text-max-width': '150px' } },
+    // A companion result in that band reads at the size of the results around it.
+    { selector: 'node.xsrc-band-item', style: {
+      color: cssVar('--text'), 'font-size': 13, 'border-width': 1.5, width: 164, 'text-max-width': '150px', padding: '7px',
+    } },
     { selector: 'node.kind-background', style: { 'background-color': cssVar('--background-node-tint'), 'border-color': cssVar('--background-node'), 'border-style': 'dashed', 'font-style': 'normal' } },
     // The focused box in a column layout: an outline overlay only (like
     // .is-selected below) -- its fill/border/width/font stay whatever its own
@@ -1070,6 +1291,7 @@ export function createGraphController(opts) {
     cytoscape, container, pane, data, labelOf, cssVar, navigate, onWholeMap,
   } = opts;
   const index = buildGraphIndex(data);
+  const figCounts = figureCountsByNode(data);
   // Essentials (tasks/p17-essentials.md): an opened section drawn without its
   // definitions, from an index built without them (lazily, on first use).
   let essIdx = null;
@@ -1091,7 +1313,7 @@ export function createGraphController(opts) {
     expanded: new Set(), // overview: clusters open inside the subject
     focusId: null,
     hops: 1,
-    showXsrc: false,
+    showXsrc: readShowXsrc(), // "Show companion links": remembered, off by default
     selectedId: null,
     hoverId: null,
     zoomTarget: null, // overview: the cluster last zoomed to
@@ -1120,6 +1342,7 @@ export function createGraphController(opts) {
    * graph alike), so a result's box looks the same wherever it is drawn. */
   function tierClasses(id) {
     const n = index.nodes.get(id);
+    if (isXsrcRegion(id)) return ['xsrc-region'];
     if (n && n.tier) return [`ess-${n.tier}`];
     return n && (n.xsrc || n.kind === 'external') ? ['ess-background'] : [];
   }
@@ -1130,9 +1353,24 @@ export function createGraphController(opts) {
   function titleMaxFor(id) {
     const n = index.nodes.get(id);
     if (!n) return 30;
+    if (isXsrcRegion(id)) return 40;
     if (n.tier === 'major') return 40;
+    // A box carrying a figure shows its whole title (it is the figure's address).
+    if (n.tier === 'background' && (raw(id).figures || []).length) return 48;
     if (n.tier === 'background' || n.xsrc || n.kind === 'external') return 26;
     return 30;
+  }
+
+  /** The companion manuscript's own region (the external-source cluster). */
+  function isXsrcRegion(id) {
+    const n = index.nodes.get(id);
+    return !!n && n.kind === 'external' && n.xsrc && index.clusters.has(id);
+  }
+  /** How many companion results (not section boxes) a region holds. */
+  function xsrcResultCount(id) {
+    let k = 0;
+    for (const n of index.nodes.values()) if (n.kind === 'xsrc' && ancestorsOf(index, n.id).includes(id)) k += 1;
+    return k;
   }
 
   const reducedMotion = () => typeof window !== 'undefined' && window.matchMedia
@@ -1162,25 +1400,28 @@ export function createGraphController(opts) {
    * the proof skeleton (thick arrows; hovering one names the results it passes
    * through). A band is not an opened cluster: clicking it opens its section. */
   function essentialsElements() {
-    const g = essentialsMap(index);
+    const g = essentialsMap(index, { showXsrc: st.showXsrc });
     const els = [];
     for (const n of g.nodes) {
-      const t = textOf(n.id);
+      const t = textOf(n.id, { inCluster: !!(n.xsrc && !n.band) });
       if (n.band) {
         // The band's name sits in a column of row headings to the left of the map
         // (layoutOverview), where no arrow crosses it; clicking either opens the section.
-        els.push({ group: 'nodes', data: { id: n.id, label: '' }, classes: 'band cluster' });
+        // The companion band reads "Companion manuscript: <its title>".
+        const label = n.xsrc ? [t.number, t.title].filter(Boolean).join(': ') : [t.number, t.title].filter(Boolean).join('\n');
+        els.push({ group: 'nodes', data: { id: n.id, label: '' }, classes: n.xsrc ? 'band cluster band-xsrc' : 'band cluster' });
         els.push({
           group: 'nodes',
-          data: { id: `band-label:${n.id}`, opens: n.id, label: [t.number, t.title].filter(Boolean).join('\n') },
-          classes: 'band-label',
+          data: { id: `band-label:${n.id}`, opens: n.id, label },
+          classes: n.xsrc ? 'band-label band-label-xsrc' : 'band-label',
         });
         continue;
       }
       const classes = [...nodeClasses(raw(n.id)), ...tierClasses(n.id)];
+      if (n.xsrc) classes.push('xsrc-band-item');
       els.push({
         group: 'nodes',
-        data: { id: n.id, parent: n.parent || undefined, label: nodeLabel(t, { maxTitle: titleMaxFor(n.id) }) },
+        data: { id: n.id, parent: n.parent || undefined, label: nodeLabel(t, { maxTitle: n.xsrc ? 40 : titleMaxFor(n.id) }) },
         classes: classes.join(' '),
       });
     }
@@ -1216,9 +1457,9 @@ export function createGraphController(opts) {
         ? [t.number, t.title].filter(Boolean).join('  ')
         : nodeLabel(t, {
           maxTitle: titleMaxFor(n.id),
-          childCount: (idx.children.get(n.id) || []).length,
+          childCount: isXsrcRegion(n.id) ? xsrcResultCount(n.id) : (idx.children.get(n.id) || []).length,
           collapsedCluster: n.cluster,
-          xsrcCluster: index.nodes.get(n.id).kind === 'external',
+          xsrcCluster: isXsrcRegion(n.id),
         });
       els.push({
         group: 'nodes',
@@ -1311,7 +1552,7 @@ export function createGraphController(opts) {
     if (tipEl) tipEl.hidden = true;
     cy.batch(() => {
       cy.elements().remove();
-      cy.add(st.mode === 'focus' ? focusElements() : overviewElements());
+      cy.add(markFigureElements(st.mode === 'focus' ? focusElements() : overviewElements(), data, figCounts));
     });
     if (st.mode === 'overview') layoutOverview();
     else if (st.mode === 'focus') layoutFocus();
@@ -1339,7 +1580,7 @@ export function createGraphController(opts) {
   function layoutOverview() {
     if (!st.subject && st.essentials) {
       const leaves = cy.nodes().not(':parent');
-      const pos = essentialsLayout(essentialsMap(index), (id) => {
+      const pos = essentialsLayout(essentialsMap(index, { showXsrc: st.showXsrc }), (id) => {
         const d = cy.getElementById(id).layoutDimensions({ nodeDimensionsIncludeLabels: true });
         return { w: d.w, h: d.h };
       });
@@ -1550,7 +1791,10 @@ export function createGraphController(opts) {
         const centreX = (bb.x1 + bb.x2) / 2;
         const centreY = (bb.y1 + bb.y2) / 2;
         const panX = clampOrAnchorNear(midX, w, pad.left, pad.right, bb.x1, bb.x2, centreX, zoom);
-        setViewport({ zoom, pan: { x: panX, y: midY - centreY * zoom } }, animate);
+        // Taller than the pane at this zoom: start at the top (below the toolbar),
+        // where the reading starts, instead of centring it under the toolbar.
+        const panY = (bb.y2 - bb.y1) * zoom > availH ? pad.top - bb.y1 * zoom : midY - centreY * zoom;
+        setViewport({ zoom, pan: { x: panX, y: panY } }, animate);
       }
       return;
     }
@@ -1757,7 +2001,9 @@ export function createGraphController(opts) {
     if (xsrcToggle) xsrcToggle.checked = st.showXsrc;
     if (hintEl) {
       if (st.mode === 'focus') hintEl.textContent = 'Columns, not the map: what it uses in the left columns, what uses it in the right ones. Click any box to go there.';
-      else if (st.essentials && !st.subject) hintEl.textContent = 'The main results and how each is used to prove the next. Click a section to see its supporting results.';
+      else if (st.essentials && !st.subject) hintEl.textContent = st.showXsrc && essentialsXsrc(index).items.length
+        ? 'The main results and how each is used to prove the next; the companion results their proofs use (directly or through hidden steps; point at an arrow to see which) sit in their own band.'
+        : 'The main results and how each is used to prove the next. Click a section to see its supporting results.';
       else if (st.essentials) hintEl.textContent = 'Definitions are hidden here. Click a result to see everything it uses, or a heading to close it.';
       else if (st.subject) hintEl.textContent = 'Click a part to open it, or its heading to close it. Faded boxes outside link in or out.';
       else hintEl.textContent = 'Click a section to open it. Click a theorem to see what it uses and what uses it.';
@@ -1798,6 +2044,7 @@ export function createGraphController(opts) {
 
   function setShowXsrc(on) {
     st.showXsrc = !!on;
+    writeShowXsrc(st.showXsrc);
     render();
     fitView(false);
   }

@@ -48,10 +48,19 @@
     <details class="pdf-dl" data-pdf-downloads>
     <summary class="reading-btn pdf-dl__btn" title="Download the paper or the companion manuscript as PDF"><span class="pdf-dl__long">Download&nbsp;</span>PDF</summary>
     <ul class="pdf-dl__list" aria-label="PDF downloads">
-      <li><a class="pdf-dl__link" href="pdf/main-4.pdf" download="Loher-Mooney-Mouhot-Doeblin-Fourier-kinetic-Aleksandrov.pdf" type="application/pdf"><span class="pdf-dl__name">Paper (PDF)</span><span class="pdf-dl__meta">0.8&nbsp;MB</span></a></li>
-      <li><a class="pdf-dl__link" href="pdf/kinetic-aleksandrov.pdf" download="Loher-Mooney-Mouhot-From-Doeblin-to-Aleksandrov-companion.pdf" type="application/pdf"><span class="pdf-dl__name">Companion manuscript (PDF)</span><span class="pdf-dl__meta">1.1&nbsp;MB</span></a></li>
+      <li><a class="pdf-dl__link" href="pdf/doeblin-fourier.pdf" download="doeblin-fourier.pdf" type="application/pdf"><span class="pdf-dl__name">Paper (PDF)</span><span class="pdf-dl__meta">0.8&nbsp;MB</span></a></li>
+      <li><a class="pdf-dl__link" href="pdf/doeblin-fourier-companion.pdf" download="doeblin-fourier-companion.pdf" type="application/pdf"><span class="pdf-dl__name">Companion manuscript (PDF)</span><span class="pdf-dl__meta">1.1&nbsp;MB</span></a></li>
     </ul>
   </details>
+    <!-- Figures menu (site/figuremenu.mjs; site/app.js initFigureMenu fills
+         the list and unhides it when data.figures has entries). -->
+    <details class="pdf-dl fig-menu" data-figure-menu hidden>
+      <summary class="reading-btn pdf-dl__btn fig-menu__btn" title="Every figure, and where it is in the paper">Figures</summary>
+      <div class="pdf-dl__list fig-menu__panel">
+        <p class="fig-menu__intro" id="fig-menu-intro">Every figure, and where it is. Choose one to open it.</p>
+        <ul class="fig-menu__list" aria-labelledby="fig-menu-intro"></ul>
+      </div>
+    </details>
     <div class="reading-size" role="group" aria-label="Text size" data-reading="text-size">
       <button type="button" class="reading-btn reading-size__btn" data-reading="text-smaller" aria-label="Smaller text" title="Smaller text">A&minus;</button>
       <button type="button" class="reading-btn reading-size__btn reading-size__reset" data-reading="text-reset" aria-label="Text size 100%; reset to 100%" title="Text size 100% (click to reset)">A</button>
@@ -74,8 +83,8 @@
     <div id="cy" class="cy-canvas" tabindex="0" aria-label="Dependency graph. Plus and minus zoom, 0 fits the view."></div>
     <div id="outline" class="outline" hidden></div>
     <div class="graph-toolbar" role="toolbar" aria-label="Graph view">
-      <button type="button" class="graph-btn graph-btn--history" data-history-nav="back" aria-label="Back to the previous view (Alt+&larr;)" title="Back to the previous view (Alt+&larr;)">&larr; Back</button>
-      <button type="button" class="graph-btn graph-btn--history" data-history-nav="forward" aria-label="Forward to the next view (Alt+&rarr;)" title="Forward to the next view (Alt+&rarr;)">Forward &rarr;</button>
+      <button type="button" class="graph-btn graph-btn--history" data-history-nav="back" aria-label="Back up the proof: to the result that uses this one" title="Back up the proof: to the result that uses this one">&larr; Back</button>
+      <button type="button" class="graph-btn graph-btn--history" data-history-nav="forward" aria-label="Forward: back down to where Back came up from" title="Forward: back down to where Back came up from">Forward &rarr;</button>
       <button type="button" class="graph-btn graph-btn--map" data-graph-action="whole-map" title="Back to the map of sections and theorems">Whole map</button>
       <div class="graph-tiers" role="group" aria-label="How much of the graph to show" data-graph-view-switch>
         <button type="button" class="graph-btn" data-graph-action="view-essentials" aria-pressed="true" title="The main results and how each is used to prove the next">Main results</button>
@@ -116,6 +125,9 @@
           <span aria-hidden="true"><i class="legend-swatch legend-swatch--section"></i>Section</span>
           <span aria-hidden="true"><i class="legend-swatch legend-swatch--subsection"></i>Subsection</span>
         </div>
+        <div class="graph-legend__row graph-legend__row--figures" data-legend-figures>
+          <span class="graph-legend__key"><i class="legend-figure" aria-hidden="true">&#x25A3;</i>a box with a figure (a section: how many it holds); all are under &ldquo;Figures&rdquo; at the top</span>
+        </div>
         <div class="graph-legend__row">
           <span class="graph-legend__key"><i class="legend-arrow" aria-hidden="true"></i>A &rarr; B: A is used in the proof of B</span>
         </div>
@@ -128,9 +140,11 @@
         <div class="graph-legend__row">
           <button type="button" class="graph-legend__help" data-graph-action="help">What the boxes and arrows mean &rarr;</button>
         </div>
-        <div class="graph-legend__row graph-legend__row--xsrc-toggle">
-          <label class="graph-legend__toggle"><input type="checkbox" data-graph-xsrc> Show <span data-ext-tag>external</span> links</label>
-        </div>
+      </div>
+      <!-- Outside the collapsible body: the toggle stays visible when the legend is collapsed. -->
+      <div class="graph-legend__row graph-legend__row--xsrc-toggle">
+        <label class="graph-legend__toggle"><input type="checkbox" data-graph-xsrc aria-describedby="graph-xsrc-note"> Show <span data-ext-tag>external</span> links</label>
+        <span class="graph-legend__toggle-note" id="graph-xsrc-note">Adds the results this paper uses from the <span data-ext-name>external source</span>, in their own region, with their arrows into this paper&rsquo;s results.</span>
       </div>
     </div>
   </section>
@@ -138,7 +152,7 @@
   <div class="pane-divider" role="separator" tabindex="0" aria-orientation="vertical" aria-controls="panel" aria-label="Resize the reading panel (arrow keys; double-click to reset)" aria-valuemin="25" aria-valuemax="85" aria-valuenow="40"></div>
 
   <section id="panel" class="pane pane--panel" aria-label="Reading panel" tabindex="-1">
-    <button type="button" class="graph-btn graph-btn--history reading-panel__back" data-history-nav="back" aria-label="Back to the previous view (Alt+&larr;)" title="Back to the previous view (Alt+&larr;)">&larr; Back</button>
+    <button type="button" class="graph-btn graph-btn--history reading-panel__back" data-history-nav="back" aria-label="Back up the proof: to the result that uses this one" title="Back up the proof: to the result that uses this one">&larr; Back</button>
     <div id="panel-content" class="panel-content">
       <div class="panel-empty">
         <p>Select a node in the graph, or search above, to read its statement and proof.</p>
