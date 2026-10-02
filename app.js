@@ -558,6 +558,7 @@ function figureCardHtml(fig) {
   // Both theme variants of a static figure (scripts/build_tikz_figures.mjs);
   // site/app.css shows the one matching the page's theme.
   const altText = escapeHtml(plainText(fig.titleHtml)).replace(/"/g, '&quot;');
+  if (fig.renderer === 'video') return videoCardHtml(fig, { kindTag, toyTag, reviewTag, params, altText });
   const mount = fig.renderer === 'd3'
     ? `<div class="figure-mount" data-figure-id="${escapeHtml(fig.id)}"></div>`
     : `<div class="figure-img-frame figure-static-frame"><img class="figure-static figure-static--light" src="figures/${encodeURIComponent(fig.id)}.svg" alt="${altText}" loading="lazy"><img class="figure-static figure-static--dark" src="figures/${encodeURIComponent(fig.id)}.dark.svg" alt="${altText}" loading="lazy"></div>`;
@@ -568,6 +569,117 @@ function figureCardHtml(fig) {
       ${figureCaptionHtml(fig)}
       ${params}
     </figure>`;
+}
+
+// ---------------------------------------------------------------------------
+// Animations (tasks/p18): a `renderer: 'video'` figure is a video card --
+// the native <video> (controls, no autoplay, preload none, poster), a
+// playback-speed group (0.75x by default), the caption, and the chapters as
+// buttons that seek to each step. Files are relative (animations/<file>.*),
+// so the site works under any sub-path. Enlarge moves the video mount and
+// caption into the figure dialog like any other figure.
+// ---------------------------------------------------------------------------
+const VIDEO_SPEEDS = [0.5, 0.75, 1, 1.25];
+const VIDEO_DEFAULT_SPEED = 0.75;
+
+function videoTimeText(t) {
+  const s = Math.max(0, Math.round(Number(t) || 0));
+  return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
+}
+
+function videoCardHtml(fig, { kindTag, toyTag, reviewTag, params, altText }) {
+  const v = fig.video || { file: '', chapters: [] };
+  const base = `animations/${encodeURIComponent(v.file)}`;
+  const speeds = VIDEO_SPEEDS.map((s) => `<button type="button" class="video-speed__btn" data-video-speed="${s}" aria-pressed="${s === VIDEO_DEFAULT_SPEED}">${s}×</button>`).join('');
+  const chapters = (v.chapters || []).map((ch, i) => `
+        <li class="video-chapter">
+          <button type="button" class="video-chapter__btn" data-video-seek="${Number(ch.t)}" aria-label="Play from ${escapeHtml(videoTimeText(ch.t))}: ${escapeHtml(plainText(ch.titleHtml)).replace(/"/g, '&quot;')}">
+            <span class="video-chapter__num">${i + 1}</span><span class="video-chapter__time">${escapeHtml(videoTimeText(ch.t))}</span><span class="video-chapter__title">${ch.titleHtml}</span>
+          </button>${ch.summaryHtml ? `<div class="video-chapter__summary">${ch.summaryHtml}</div>` : ''}
+        </li>`).join('');
+  const steps = chapters ? `<div class="video-chapters"><div class="video-chapters__label">Steps (select one to jump to it)</div><ol class="video-chapters__list">${chapters}</ol></div>` : '';
+  return `
+    <figure class="figure-card figure-card--video" id="figure-${escapeHtml(fig.id)}">
+      <div class="figure-card__head">${kindTag}${toyTag}${reviewTag}${FIGURE_ENLARGE_BTN_HTML}</div>
+      <div class="figure-mount figure-video-mount">
+        <video class="figure-video" controls preload="none" playsinline poster="${base}.poster.jpg" aria-label="${altText}" data-video-duration="${Number(v.duration) || 0}">
+          <source src="${base}.mp4" type="video/mp4">
+          <a href="${base}.mp4">Download the video</a>
+        </video>
+        <div class="video-speed" role="group" aria-label="Playback speed"><span class="video-speed__label" aria-hidden="true">Speed</span>${speeds}</div>
+      </div>
+      <figcaption>${figureCaptionHtml(fig).replace(/^<figcaption>|<\/figcaption>$/g, '')}${steps}</figcaption>
+      ${params}
+    </figure>`;
+}
+
+function videoSetSpeed(video, speed) {
+  video.defaultPlaybackRate = speed;
+  video.playbackRate = speed;
+  const card = video.closest('.figure-card') || document;
+  card.querySelectorAll('[data-video-speed]').forEach((b) => b.setAttribute('aria-pressed', String(Number(b.dataset.videoSpeed) === speed)));
+}
+
+/** The card's <video>, wherever it is right now (in the card, or moved into
+ * the figure dialog by Enlarge together with its caption). */
+function videoForControl(el) {
+  const card = el.closest('.figure-card');
+  if (card) return card.querySelector('video.figure-video');
+  const dialogFig = el.closest('#figure-modal-figure');
+  return dialogFig ? dialogFig.querySelector('video.figure-video') : null;
+}
+
+function videoSeek(video, t) {
+  const go = () => {
+    try { video.currentTime = t; } catch (err) { /* not seekable yet */ }
+    videoMarkChapter(video);
+  };
+  if (video.readyState >= 1) { go(); return; }
+  video.addEventListener('loadedmetadata', go, { once: true });
+  video.preload = 'auto';
+  video.load();
+}
+
+/** Mark the chapter playing now (aria-current) as the video advances. */
+function videoMarkChapter(video) {
+  const scope = video.closest('.figure-card') || video.closest('#figure-modal-figure');
+  if (!scope) return;
+  const btns = [...scope.querySelectorAll('[data-video-seek]')];
+  let cur = -1;
+  btns.forEach((b, i) => { if (video.currentTime + 0.05 >= Number(b.dataset.videoSeek)) cur = i; });
+  btns.forEach((b, i) => { if (i === cur) b.setAttribute('aria-current', 'step'); else b.removeAttribute('aria-current'); });
+}
+
+/** Wire every video card in a freshly rendered panel: default speed, the
+ * speed group, chapter buttons and the current-chapter mark. Buttons are
+ * handled by delegation on the card, so they keep working after Enlarge
+ * moves the mount and caption (the caption carries the chapter list). */
+function mountVideos(root) {
+  root.querySelectorAll('video.figure-video').forEach((video) => {
+    if (video.dataset.wired) return;
+    video.dataset.wired = '1';
+    videoSetSpeed(video, VIDEO_DEFAULT_SPEED);
+    // load() and a new source reset playbackRate to defaultPlaybackRate,
+    // which videoSetSpeed keeps in step.
+    video.addEventListener('timeupdate', () => videoMarkChapter(video));
+    video.addEventListener('seeked', () => videoMarkChapter(video));
+  });
+}
+
+function initVideoControls() {
+  // Capture phase: a chapter title can contain notation spans, whose own
+  // click handler would otherwise take the click (and open a popover)
+  // before it reached the button.
+  document.addEventListener('click', (e) => {
+    const speedBtn = e.target.closest('[data-video-speed]');
+    const seekBtn = e.target.closest('[data-video-seek]');
+    if (!speedBtn && !seekBtn) return;
+    const video = videoForControl(speedBtn || seekBtn);
+    if (!video) return;
+    e.stopPropagation();
+    if (speedBtn) videoSetSpeed(video, Number(speedBtn.dataset.videoSpeed));
+    else videoSeek(video, Number(seekBtn.dataset.videoSeek));
+  }, true);
 }
 
 function figuresSectionHtml(node, data) {
@@ -711,7 +823,7 @@ function fitFigurePopout() {
 /** Interactive controls a click on the figure itself must NOT pop out --
  * sliders, buttons, selects, checkboxes, `details`, or any other
  * interactive element a figure module builds into its own mount. */
-const FIGURE_INTERACTIVE_SELECTOR = 'input, button, select, textarea, a, details, summary, [contenteditable], [role="button"], [tabindex]';
+const FIGURE_INTERACTIVE_SELECTOR = 'input, button, select, textarea, a, details, summary, video, [contenteditable], [role="button"], [tabindex]';
 
 function initFigurePopouts() {
   const dialog = document.getElementById('figure-modal');
@@ -922,6 +1034,7 @@ function renderCompanionNode(node) {
     ${block('Summary', node.summaryHtml)}
     <div class="section-label" id="statement-anchor">Statement, quoted from ${escapeHtml(tag)}</div>${xsrcQuotes(node.statementHtml)}
     ${node.locationText ? `<p class="xsrc-pointer">${escapeHtml(node.locationText)}</p>` : ''}
+    ${figuresSectionHtml(node, data)}
     ${block('How the paper uses it', node.roleHtml)}
     ${paperSentencesHtml('How the paper cites it', node.citingSentences, data)}
     ${usesList('Uses', node.uses, data, node.id)}
@@ -1060,6 +1173,7 @@ function renderPanel(node, level) {
   }
   wireStepToggles(panel);
   mountFigures(panel, state.data);
+  mountVideos(panel);
 }
 
 function renderMissing(id) {
@@ -1282,6 +1396,7 @@ async function main() {
   initSearch(data);
   initNotationPopovers(data);
   initFigurePopouts();
+  initVideoControls();
   buildOutline(data);
   initHistoryNav();
   initFigureMenu(data);

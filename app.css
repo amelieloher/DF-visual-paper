@@ -974,3 +974,37 @@ body[data-resizing] .pane { pointer-events: none; }
 @media (max-width: 700px) {
   .fig-menu__panel { width: auto; max-height: 70dvh; }
 }
+/* ---------- animations: video cards (tasks/p18) ---------- */
+.figure-video-mount { flex-direction: column; align-items: stretch; gap: 8px; padding: 0; background: transparent; min-height: 0; }
+.figure-video {
+  display: block; width: 100%; height: auto; aspect-ratio: 16 / 9; border-radius: 6px;
+  background: var(--fig-bg); border: 1px solid var(--border);
+}
+.video-speed { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; font-family: var(--font-ui); font-size: 13px; color: var(--text-dim); }
+.video-speed__label { margin-right: 4px; }
+.video-speed__btn, .video-chapter__btn {
+  font-family: var(--font-ui); color: var(--text); background: var(--surface);
+  border: 1px solid var(--border); cursor: pointer;
+}
+.video-speed__btn { padding: 3px 10px; border-radius: 999px; font-size: 13px; line-height: 1.3; min-width: 3.4em; }
+.video-speed__btn[aria-pressed="true"] { background: var(--accent-strong); border-color: var(--accent-strong); color: var(--surface); font-weight: 600; }
+.video-speed__btn:hover { border-color: var(--accent-strong); }
+.video-speed__btn:focus-visible, .video-chapter__btn:focus-visible, .figure-video:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.video-chapters { margin-top: 10px; }
+.video-chapters__label { font-weight: 600; color: var(--text); margin-bottom: 4px; }
+.video-chapters__list { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
+.video-chapter__btn {
+  display: flex; align-items: baseline; gap: 8px; width: 100%; text-align: left;
+  padding: 5px 8px; border-radius: 6px; font-size: 13.5px; line-height: 1.4;
+}
+.video-chapter__btn:hover { border-color: var(--accent-strong); }
+.video-chapter__btn[aria-current="step"] { border-color: var(--accent-strong); box-shadow: inset 3px 0 0 var(--accent-strong); }
+.video-chapter__num { flex: 0 0 auto; font-weight: 700; color: var(--accent-strong); min-width: 1.2em; }
+.video-chapter__time { flex: 0 0 auto; font-family: var(--font-mono); font-size: 12px; color: var(--text-faint); }
+.video-chapter__title { flex: 1 1 auto; }
+.video-chapter__summary { margin: 2px 0 4px 3.6em; color: var(--text-dim); line-height: 1.45; }
+/* Enlarged: the whole video on one screen (height bounded by the dialog;
+   the speed row sits under it), caption and steps scroll below. */
+.figure-modal__figure .figure-video-mount { align-items: center; }
+.figure-modal__figure .figure-video { width: auto; max-width: 100%; max-height: calc(100vh - 130px); }
+.figure-modal__figure .video-speed { align-self: center; }
