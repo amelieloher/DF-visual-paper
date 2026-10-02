@@ -610,7 +610,7 @@ function mountFigures(root, data) {
 // exercises the move logic directly instead).
 // ---------------------------------------------------------------------------
 const figurePopoutState = {
-  mount: null, caption: null, placeholder: null, opener: null,
+  mount: null, caption: null, placeholder: null, opener: null, observer: null,
 };
 
 function figurePopoutMountEl(card) {
@@ -626,6 +626,10 @@ function closeFigurePopoutNow() {
     mount, caption, placeholder, opener,
   } = figurePopoutState;
   if (!mount) return;
+  if (figurePopoutState.observer) { figurePopoutState.observer.disconnect(); figurePopoutState.observer = null; }
+  mount.style.transform = '';
+  mount.style.transformOrigin = '';
+  mount.style.marginBottom = '';
   placeholder.replaceWith(...(caption ? [mount, caption] : [mount]));
   figurePopoutState.mount = null;
   figurePopoutState.caption = null;
@@ -666,8 +670,38 @@ function openFigurePopout(card, opener) {
   const dialog = document.getElementById('figure-modal');
   if (typeof dialog.showModal === 'function') dialog.showModal();
   else dialog.setAttribute('open', ''); // jsdom: no showModal -- reflect `open` so the DOM move is still checkable
-  // tasks/p17-figure-feedback.md: the enlarged figure keeps the full viewport
-  // width (no shrink-to-height); a tall figure and its caption scroll.
+  // Author feedback (2026-10-02): the enlarged figure must fit on one screen.
+  // It is laid out at the dialog's full width, then the whole drawing
+  // (controls included) is scaled down to the dialog's height if taller;
+  // the caption follows below and scrolls.
+  fitFigurePopout();
+  requestAnimationFrame(() => requestAnimationFrame(fitFigurePopout));
+  if (typeof ResizeObserver === 'function') {
+    figurePopoutState.observer = new ResizeObserver(() => fitFigurePopout());
+    figurePopoutState.observer.observe(mount);
+    figurePopoutState.observer.observe(target);
+  }
+}
+
+/** Scale the popped-out figure so that its full drawing fits in the
+ * dialog's figure area. A CSS transform leaves the element's layout box
+ * (what ResizeObserver watches) unchanged, so this cannot loop; the
+ * negative bottom margin removes the space the unscaled box would keep. */
+function fitFigurePopout() {
+  const { mount } = figurePopoutState;
+  const target = document.getElementById('figure-modal-figure');
+  if (!mount || !target) return;
+  const h = mount.offsetHeight;
+  const avail = target.clientHeight;
+  if (!h || !avail || h <= avail) {
+    mount.style.transform = '';
+    mount.style.marginBottom = '';
+    return;
+  }
+  const s = avail / h;
+  mount.style.transformOrigin = 'top center';
+  mount.style.transform = `scale(${s})`;
+  mount.style.marginBottom = `${-(h - h * s)}px`;
 }
 
 /** Interactive controls a click on the figure itself must NOT pop out --

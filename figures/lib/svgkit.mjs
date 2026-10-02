@@ -441,6 +441,10 @@ export function group(x = 0, y = 0, extra = {}) {
  */
 export function measuredWidth(el, fallback = 900) {
   try {
+    // Layout width first: unlike getBoundingClientRect it ignores CSS
+    // transforms, so the pop-out's scale-to-fit (site/app.js
+    // fitFigurePopout) cannot feed back into the figure's layout.
+    if (el.offsetWidth > 0) return el.offsetWidth;
     const r = el.getBoundingClientRect();
     if (r && r.width > 0) return r.width;
   } catch {
