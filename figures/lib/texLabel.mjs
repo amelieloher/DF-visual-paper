@@ -47,6 +47,19 @@ function katexLib() {
 
 /** True when labels are typeset with KaTeX; false in every fallback case
  * (see the header). */
+// WebKit (Safari, and every browser on iOS) draws HTML inside an SVG
+// <foreignObject> ignoring the SVG's transforms and viewBox scaling: KaTeX
+// labels pile up at the top-left of the figure, unscaled. There the
+// foreignObject stays as an empty placeholder (its geometry is right) and
+// the typeset label is drawn in an HTML layer over the SVG, placed by the
+// placeholder's own SVG transform (see syncOverlay below).
+function webkitForeignObjectBroken() {
+  try {
+    const ua = navigator.userAgent || '';
+    return /AppleWebKit/.test(ua) && !/(Chrome|Chromium|Edg)\//.test(ua);
+  } catch { return false; }
+}
+
 export function texEnabled() {
   return !isSnapshotMode() && typeof document !== 'undefined' && !!document.body && !!katexLib();
 }
@@ -199,7 +212,7 @@ function relayoutAll() {
   cache.clear();
   for (const rec of live) {
     if (!rec.fo.isConnected) {
-      if (rec.seen || Date.now() - rec.born > 20000) live.delete(rec);
+      if (rec.seen || Date.now() - rec.born > 20000) { live.delete(rec); if (rec.overlay) rec.div.remove(); }
       continue;
     }
     rec.seen = true;
@@ -246,6 +259,70 @@ function place(rec) {
   rec.w = m.w;
   rec.h = m.h;
   rec.base = m.base;
+  if (rec.overlay) queueOverlaySync();
+}
+
+// ---- WebKit overlay -------------------------------------------------------
+const WEBKIT_OVERLAY = typeof window !== 'undefined' && webkitForeignObjectBroken();
+let overlaySyncQueued = false;
+function queueOverlaySync() {
+  if (overlaySyncQueued) return;
+  overlaySyncQueued = true;
+  requestAnimationFrame(() => { overlaySyncQueued = false; syncOverlays(); });
+}
+const observedSvgs = new WeakSet();
+function overlayLayer(svg) {
+  const host = svg.parentNode;
+  if (!host || host.nodeType !== 1) return null;
+  let layer = null;
+  for (const c of host.children) if (c.classList && c.classList.contains('vp-fig-tex-layer')) layer = c;
+  if (!layer) {
+    if (getComputedStyle(host).position === 'static') host.style.position = 'relative';
+    layer = document.createElement('div');
+    layer.className = 'vp-fig-tex-layer';
+    layer.setAttribute('aria-hidden', 'true');
+    layer.style.cssText = 'position:absolute;left:0;top:0;width:0;height:0;overflow:visible;pointer-events:none;';
+    host.appendChild(layer);
+  }
+  if (!observedSvgs.has(svg) && typeof ResizeObserver === 'function') {
+    observedSvgs.add(svg);
+    new ResizeObserver(() => queueOverlaySync()).observe(svg);
+  }
+  return layer;
+}
+/** Place every live overlay label over its placeholder: the placeholder's
+ * transform into its <svg>'s user space (ancestor CSS transforms cancel in
+ * the product), then the viewBox-to-CSS scale and the <svg>'s offset in its
+ * host, both measured untransformed so a scaled pop-out does not count twice. */
+function syncOverlays() {
+  for (const rec of live) {
+    if (!rec.overlay) continue;
+    const { fo, div } = rec;
+    if (!fo.isConnected) { div.remove(); continue; }
+    const svg = fo.ownerSVGElement;
+    const a = fo.getScreenCTM && fo.getScreenCTM();
+    const b = svg && svg.getScreenCTM && svg.getScreenCTM();
+    if (!svg || !a || !b) continue;
+    const layer = overlayLayer(svg);
+    if (!layer) continue;
+    if (div.parentNode !== layer) layer.appendChild(div);
+    const m = b.inverse().multiply(a);
+    const vb = svg.viewBox && svg.viewBox.baseVal;
+    const cssW = svg.clientWidth || svg.getBoundingClientRect().width;
+    const s = vb && vb.width ? cssW / vb.width : 1;
+    const hostRect = svg.parentNode.getBoundingClientRect();
+    const svgRect = svg.getBoundingClientRect();
+    const k = cssW ? svgRect.width / cssW : 1; // ancestor CSS scale, removed
+    const ox = (svgRect.left - hostRect.left) / k - (vb ? vb.x * s : 0);
+    const oy = (svgRect.top - hostRect.top) / k - (vb ? vb.y * s : 0);
+    const x = Number(fo.getAttribute('x')) || 0;
+    const y = Number(fo.getAttribute('y')) || 0;
+    div.style.position = 'absolute';
+    div.style.left = '0';
+    div.style.top = '0';
+    div.style.transformOrigin = '0 0';
+    div.style.transform = `translate(${ox}px,${oy}px) scale(${s}) matrix(${m.a},${m.b},${m.c},${m.d},${m.e},${m.f}) translate(${x}px,${y}px)`;
+  }
 }
 
 /**
@@ -286,10 +363,12 @@ export function texLabel(x, y, src, opts = {}) {
   div.className = o.maxWidth ? 'vp-fig-tex vp-fig-tex--wrap' : 'vp-fig-tex';
   div.setAttribute('style', style);
   div.innerHTML = PROBE + html;
-  fo.appendChild(div);
+  const overlay = WEBKIT_OVERLAY;
+  if (!overlay) fo.appendChild(div);
   const rec = {
-    fo, div, html, style, wrap: !!o.maxWidth, x, y, anchor: o.anchor, clamp: o.clamp || null, born: Date.now(), seen: false,
+    fo, div, html, style, wrap: !!o.maxWidth, x, y, anchor: o.anchor, clamp: o.clamp || null, born: Date.now(), seen: false, overlay,
   };
+  if (overlay) div.vpTexRec = rec;
   place(rec);
   live.add(rec);
   scheduleIfLoading();
