@@ -249,7 +249,7 @@ function welcomePanelHtml(data) {
     : '';
   // Companion status as main-4 states it (source/main-4.tex, disclosure paragraph).
   const extPara = ext ? `
-        <p>The paper refers to a companion manuscript for several detailed arguments. Each result it cites from there, and each companion result those arguments use directly, is shown in its own region of the graph, labelled “${escapeHtml(ext.label)}”: its statement quoted verbatim with the companion manuscript's own numbering, a summary, how it is used, and, where the companion manuscript gives one, its proof in numbered steps. On the map these appear with “Show ${escapeHtml(ext.tag)} links”. The companion manuscript is published on Hexagon as hexagon:2610.00618v1.</p>` : '';
+        <p>The paper refers to a companion manuscript for several detailed arguments. Each result it cites from there, and each companion result those arguments use directly, is shown in its own region of the graph, labelled “${escapeHtml(ext.label)}”: its statement quoted verbatim with the companion manuscript's own numbering, a summary, how it is used, and, where the companion manuscript gives one, its proof in numbered steps. On the map these appear with “Show ${escapeHtml(ext.tag)} links”. ${meta.external.published ? ` The companion manuscript is published on Hexagon as ${publishedLinked(escapeHtml(meta.external.published.id), meta.external.published)}.` : ''}</p>` : '';
   const checkedExt = ext ? ', text quoted from the companion manuscript,' : '';
   const allNodes = { ...((data && data.nodes) || {}), ...((data && data.externalNodes) || {}) };
   const hasBackground = Object.values(allNodes).some((n) => n && n.kind === 'background');
@@ -1010,10 +1010,17 @@ function xsrcTag(node) {
   return c.tag || htmlToText(c.numberHtml) || 'external source';
 }
 
+/** Link the published version's identifier where escaped text names it. */
+function publishedLinked(html, pub) {
+  if (!pub) return html;
+  const id = escapeHtml(pub.id);
+  return html.split(id).join(`<a href="${escapeHtml(pub.url)}" target="_blank" rel="noopener">${id}</a>`);
+}
+
 function xsrcNumberingNote(node) {
   const cluster = xsrcClusterOf(node);
   const a = cluster.arxiv;
-  if (!a) return cluster.sourceNote ? `<p class="xsrc-note">${escapeHtml(cluster.sourceNote)}</p>` : '';
+  if (!a) return cluster.sourceNote ? `<p class="xsrc-note">${publishedLinked(escapeHtml(cluster.sourceNote), cluster.published)}</p>` : '';
   return `<p class="xsrc-note">numbering as in <a href="${escapeHtml(a.url)}" target="_blank" rel="noopener">arXiv:${escapeHtml(a.id)}${escapeHtml(a.version)}</a></p>`;
 }
 
