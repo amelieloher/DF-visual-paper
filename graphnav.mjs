@@ -1099,7 +1099,14 @@ function nodeClasses(n) {
   else if (n.level === 'L0' && n.kind !== 'section' && n.kind !== 'external') classes.push('theorem');
   else classes.push(`kind-${n.kind}`);
   if (n.cluster) classes.push(`cluster-${n.cluster}`);
+  if (Array.isArray(n.lean) && n.lean.length) classes.push('lean');
   return classes;
+}
+
+/** A filled check-circle in `color`, as a data URI (the Lean badge on a graph box). */
+export function leanCheckSvg(color) {
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 20 20"><circle cx="10" cy="10" r="9" fill="${color}" stroke="#ffffff" stroke-width="1.5"/><path d="M5.6 10.4l2.9 2.9 5.9-6.2" fill="none" stroke="#ffffff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+  return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
 }
 
 /** `fontGen` > 0 adds a never-installed family name to the stack: it changes
@@ -1131,6 +1138,15 @@ function buildStylesheet(cssVar, fontGen = 0) {
     { selector: 'node.lvl-L0, node.lvl-L1', style: { 'font-size': 15 } },
     { selector: 'node.lvl-L0', style: { 'font-weight': 600 } },
     { selector: 'node.theorem', style: { 'background-color': cssVar('--accent'), color: cssVar('--surface'), 'border-color': cssVar('--accent-strong') } },
+    // Formalised in Lean: a green check-circle on the box's top-right corner.
+    { selector: 'node.lean', style: {
+      'background-image': leanCheckSvg(cssVar('--lean')),
+      'background-width': 18, 'background-height': 18,
+      'background-position-x': '100%', 'background-position-y': '0%',
+      'background-offset-x': 9, 'background-offset-y': -9,
+      'background-clip': 'none', 'background-image-containment': 'over', 'bounds-expansion': 10,
+      'background-image-opacity': 1,
+    } },
     // Box geometry (width/text-max-width) is keyed on tier/kind alone below, never on
     // which view drew the element, so a box is the same size everywhere it appears:
     // the whole map, an opened section, a focus, Full graph. ":childless" guards a

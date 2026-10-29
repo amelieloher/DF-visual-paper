@@ -132,6 +132,7 @@ function applyExternalNames(meta) {
   document.querySelectorAll('[data-ext-name]').forEach((el) => { if (ext) el.textContent = ext.lower; });
   document.querySelectorAll('[data-ext-tag]').forEach((el) => { if (ext) el.textContent = ext.tag; });
   document.querySelectorAll('.graph-legend__row--xsrc, .graph-legend__row--xsrc-toggle').forEach((el) => { el.hidden = !ext; });
+  document.querySelectorAll('[data-legend-lean]').forEach((el) => { el.hidden = !meta.lean; });
 }
 function arxivUrl(id) {
   return `https://arxiv.org/abs/${encodeURIComponent(id)}`;
@@ -211,7 +212,8 @@ function howToReadGraphHtml(meta) {
         <li><i class="legend-swatch legend-swatch--definition" aria-hidden="true"></i>Definition or assumption: small, grey. The paper&rsquo;s setting (the definitions every section works with) sits beside the sections in the full graph.</li>
         <li><i class="legend-swatch legend-swatch--section" aria-hidden="true"></i>Section, closed: click to open it.</li>
         <li><i class="legend-swatch legend-swatch--subsection" aria-hidden="true"></i>Subsection: a group of results, not a result; white with a dashed border.</li>
-        <li><i class="legend-swatch legend-swatch--ext" aria-hidden="true"></i>Another paper the proofs cite.</li>${extItems}
+        <li><i class="legend-swatch legend-swatch--ext" aria-hidden="true"></i>Another paper the proofs cite.</li>${extItems}${meta.lean ? `
+        <li><i class="legend-swatch legend-swatch--lean" aria-hidden="true"></i>Green check: formalised and proved in Lean; the badge above the statement links to it.</li>` : ''}
         <li><i class="legend-arrow" aria-hidden="true"></i>Arrow A &rarr; B: A is used in the proof (or statement, or definition) of B. Every arrow is drawn the same way.</li>
         <li><i class="legend-arrow legend-arrow--hl" aria-hidden="true"></i>Orange arrows: the arrows of the box you point at or have selected.</li>
         <li><i class="legend-arrow legend-arrow--mutual" aria-hidden="true"></i>Two-headed arrow (full graph, closed sections): each section uses something in the other.</li>
@@ -247,7 +249,7 @@ function welcomePanelHtml(data) {
     : '';
   // Companion status as main-4 states it (source/main-4.tex, disclosure paragraph).
   const extPara = ext ? `
-        <p>The paper refers to a companion manuscript for several detailed arguments. Each result it cites from there, and each companion result those arguments use directly, is shown in its own region of the graph, labelled “${escapeHtml(ext.label)}”: its statement quoted verbatim with the companion manuscript's own numbering, a summary, how it is used, and, where the companion manuscript gives one, its proof in numbered steps. On the map these appear with “Show ${escapeHtml(ext.tag)} links”. The companion manuscript is not intended for publication.</p>` : '';
+        <p>The paper refers to a companion manuscript for several detailed arguments. Each result it cites from there, and each companion result those arguments use directly, is shown in its own region of the graph, labelled “${escapeHtml(ext.label)}”: its statement quoted verbatim with the companion manuscript's own numbering, a summary, how it is used, and, where the companion manuscript gives one, its proof in numbered steps. On the map these appear with “Show ${escapeHtml(ext.tag)} links”. The companion manuscript is published on Hexagon as hexagon:2610.00618v1.</p>` : '';
   const checkedExt = ext ? ', text quoted from the companion manuscript,' : '';
   const allNodes = { ...((data && data.nodes) || {}), ...((data && data.externalNodes) || {}) };
   const hasBackground = Object.values(allNodes).some((n) => n && n.kind === 'background');
@@ -255,6 +257,9 @@ function welcomePanelHtml(data) {
   const figs = Object.values((data && data.figures) || {});
   const figPara = figs.length ? `
         <p>Some results carry a figure, drawn for this site to illustrate an argument of the paper; its title and each statement of what it shows were checked in the same way.${figs.some((f) => f && f.status && f.status !== 'approved') ? ' A figure marked “awaiting author review” has passed that check but has not yet been approved by the authors.' : ''} ${figs.some((f) => f && f.illustrationLabel) ? ' A figure marked “numerical illustration” or “illustrative path” draws example data, not a proved bound.' : ''} Under each figure, “Full explanation” gives its complete caption; “Enlarge” opens it at full width. Every figure is listed under “Figures” in the top bar, and the boxes that carry one are marked &#x25A3; on the map.</p>` : '';
+  const lean = meta.lean;
+  const leanPara = lean ? `
+        <p>A green &#10003; on a box in the graph, and a <strong>Lean &#10003;</strong> badge above its statement, mark a result whose statement is formalised and proved in Lean in <a href="${escapeHtml(lean.url)}" target="_blank" rel="noopener">${escapeHtml(lean.slug)}</a> (at commit <a href="${escapeHtml(lean.url)}/tree/${escapeHtml(lean.commit)}" target="_blank" rel="noopener" class="mono">${escapeHtml(lean.commit.slice(0, 7))}</a>), with no <code>sorry</code> and only Lean's standard axioms; Hörmander's hypoellipticity theorem is taken from a separate formalisation. The badge links to the Lean statement.</p>` : '';
   const pdfPara = typeof document !== 'undefined' && document.querySelector('[data-pdf-downloads]') ? `
         <p>“Download PDF” at the top gives the paper${ext ? ' and the companion manuscript' : ''} as PDF files, in the versions this site is built from.</p>` : '';
   return `
@@ -265,7 +270,7 @@ function welcomePanelHtml(data) {
       <div class="prose">
         <p>An interactive companion to the paper. The graph shows how the proofs are put together: the paper's sections, their subsections, and the individual results, definitions, labelled estimates and named steps of its arguments, with an arrow from each result to the results whose proofs use it. Click a section to open it, and click a result to read it here.</p>
         <p>Each result has a short summary, the exact statement from the paper, what it uses and what uses it, and, where the paper gives one, its proof: a proof idea, then numbered steps, each with a one-line summary and the paper's own text. Click a highlighted symbol in any formula to see its definition.</p>${extPara}
-        <p>All text shown is the paper's own text${checkedExt} or a summary.${background} Each summary sentence was checked, against the source passages it cites, by an independent AI auditor that did not write it; a sentence is shown only once it has passed that check. Statements and proofs are never retyped: they are extracted from the pinned source${ext ? 's' : ''} at build time.</p>${figPara}${pdfPara}
+        <p>All text shown is the paper's own text${checkedExt} or a summary.${background} Each summary sentence was checked, against the source passages it cites, by an independent AI auditor that did not write it; a sentence is shown only once it has passed that check. Statements and proofs are never retyped: they are extracted from the pinned source${ext ? 's' : ''} at build time.</p>${leanPara}${figPara}${pdfPara}
       </div>
       ${howToReadGraphHtml(meta)}
       ${citeLine}
@@ -439,6 +444,16 @@ function applyRoute(route) {
 function kindBadge(node) {
   const label = node.kind === 'theorem' ? 'theorem' : node.kind;
   return `<span class="badge badge--kind">${escapeHtml(label)}</span>`;
+}
+/** Lean formalisation (content/lean-map.yaml): one badge per declaration,
+ * linking to it at the pinned commit, and a line naming the source items. */
+function leanBadge(node) {
+  if (!Array.isArray(node.lean) || !node.lean.length) return '';
+  return node.lean.map((b) => `<a class="badge badge--lean" href="${escapeHtml(b.href)}" target="_blank" rel="noopener" title="Formalised in Lean: ${escapeHtml(b.decl)}">Lean &#10003; ${escapeHtml(b.short)}</a>`).join('');
+}
+function leanViaHtml(node) {
+  if (!Array.isArray(node.lean) || !node.lean.length || !node.lean[0].via) return '';
+  return `<p class="lean-via">Formalised in Lean: ${escapeHtml(node.lean[0].via)}.</p>`;
 }
 function draftBadge(node) {
   if (!node.draft) return '';
@@ -925,7 +940,7 @@ function renderStructuralNode(node) {
     ? `<div class="section-label">Idea</div><div class="prose">${node.ideaHtml.map((c) => `<p>${c.html}</p>`).join('')}</div>` : '';
   return `
     <div class="node-head">
-      <div class="node-head__eyebrow">${kindBadge(node)}${draftBadge(node)}</div>
+      <div class="node-head__eyebrow">${kindBadge(node)}${draftBadge(node)}${leanBadge(node)}</div>${leanViaHtml(node)}
       <h2 class="node-head__title">${node.titleHtml}</h2>
     </div>
     ${summary}
@@ -1085,7 +1100,7 @@ function renderCompanionNode(node) {
   const kind = node.contentKind ? `<span class="badge badge--kind">${escapeHtml(node.contentKind)}</span>` : '';
   return `
     <div class="node-head">
-      <div class="node-head__eyebrow"><span class="badge badge--xsrc">from ${escapeHtml(tag)}</span>${kind}${draftBadge(node)}${auditBadge(node)}</div>
+      <div class="node-head__eyebrow"><span class="badge badge--xsrc">from ${escapeHtml(tag)}</span>${kind}${draftBadge(node)}${leanBadge(node)}${auditBadge(node)}</div>${leanViaHtml(node)}
       <h2 class="node-head__title"><span class="mono">${node.numberHtml}</span>${node.titleHtml ? ` ${node.titleHtml}` : ''}</h2>
       ${xsrcNumberingNote(node)}
     </div>
@@ -1198,8 +1213,8 @@ function renderTheoremNode(node, level) {
   return `
     <div class="node-head">
       <div class="node-head__eyebrow">
-        ${kindBadge(node)}${draftBadge(node)}${auditBadge(node)}
-      </div>
+        ${kindBadge(node)}${draftBadge(node)}${leanBadge(node)}${auditBadge(node)}
+      </div>${leanViaHtml(node)}
       <h2 class="node-head__title">${node.numberHtml ? `<span class="mono">${escapeHtml(htmlToText(node.numberHtml))}</span> ` : ''}${node.titleHtml || ''}</h2>
     </div>
     ${overview}
@@ -1484,7 +1499,7 @@ function buildOutline(data) {
     return `<ul>${kids.map((n) => `
       <li class="${[n.kind === 'external' ? 'outline__ext' : '', n.tier === 'major' ? 'outline__major' : '', n.tier === 'background' && n.kind !== 'external' ? 'outline__background' : ''].filter(Boolean).join(' ')}">
         <button type="button" data-id="${escapeHtml(n.id)}">
-          <span class="outline__num">${escapeHtml(plainText(n.numberHtml))}</span>${escapeHtml(plainText(n.titleHtml) || n.id)}${n.tier === 'major' ? '<span class="outline__tag">major</span>' : ''}
+          <span class="outline__num">${escapeHtml(plainText(n.numberHtml))}</span>${escapeHtml(plainText(n.titleHtml) || n.id)}${Array.isArray(n.lean) && n.lean.length ? '<span class="lean-check" title="Formalised in Lean">&#10003;</span>' : ''}${n.tier === 'major' ? '<span class="outline__tag">major</span>' : ''}
         </button>
         ${renderLevel(n.id)}
       </li>`).join('')}</ul>`;
